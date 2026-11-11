@@ -1,4 +1,4 @@
-listusers: alice carol bob dave 
+残りのユーザ数: 1 (実ユーザ名は証跡に残さない) / uitest が一覧に無い: yes
 users.conf内の eap-uitest 件数: 0
 サーバ接続定義: rw: IKEv2, no reauthentication, rekeying every 14400s
-CRL:   18 revoked certificates:
+CRL:   51 revoked certificates:

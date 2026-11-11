@@ -51,13 +51,21 @@ function CopyField({ label, value, id }) {
   );
 }
 
-function Downloads({ user }) {
-  const link = (ext, text) => (
+function Downloads({ user, onError }) {
+  // 生成物(.sswan / Mac用一式)は生成に失敗することがあるので、先にHEADで確認して理由を表示する
+  const checkedDownload = async (ext) => {
+    try {
+      const r = await fetch(window.location.origin + dlUrl(user, ext), { method: 'HEAD' });
+      if (!r.ok) { onError && onError(`ダウンロードに失敗しました (HTTP ${r.status})`); return; }
+    } catch (e) { onError && onError(e.message); return; }
+    window.location.href = dlUrl(user, ext);
+  };
+  const link = (ext, text, checked) => (
     <Button
       key={ext}
       label={text}
       size="sm"
-      onClick={() => { window.location.href = dlUrl(user, ext); }}
+      onClick={() => (checked ? checkedDownload(ext) : (window.location.href = dlUrl(user, ext)))}
       data-testid={`dl-${user}-${ext}`}
     />
   );
@@ -66,6 +74,8 @@ function Downloads({ user }) {
       {link('p12', '.p12')}
       {link('crt', '証明書 PEM')}
       {link('key', '秘密鍵 PEM')}
+      {link('tgz', 'Mac', true)}
+      {link('sswan', 'Android', true)}
     </Stack>
   );
 }
@@ -97,7 +107,7 @@ export default function App() {
   const columns = [
     { key: 'user', header: 'ユーザ', width: proportional(2), renderCell: (u) => <Text weight="semibold">{u.user}</Text> },
     { key: 'expires', header: '証明書期限', width: proportional(2), renderCell: (u) => <Badge variant="neutral" label={u.expires || '-'} /> },
-    { key: 'dl', header: 'ダウンロード', width: proportional(4), renderCell: (u) => <Downloads user={u.user} /> },
+    { key: 'dl', header: 'ダウンロード', width: proportional(4), renderCell: (u) => <Downloads user={u.user} onError={setError} /> },
     {
       key: 'ops', header: '操作', width: proportional(3),
       renderCell: (u) => (
@@ -146,7 +156,7 @@ export default function App() {
             {issued.p12pw
               ? <CopyField id="p12pw" label=".p12 パスワード" value={issued.p12pw} />
               : <Text color="secondary">.p12 パスワード: 未保存 (旧バージョンで発行。「再発行」で保存されます)</Text>}
-            <Downloads user={issued.user} />
+            <Downloads user={issued.user} onError={setError} />
             <Stack direction="horizontal" hAlign="end">
               <Button label="閉じる" variant="primary" data-testid="close-issued" onClick={() => setIssued(null)} />
             </Stack>

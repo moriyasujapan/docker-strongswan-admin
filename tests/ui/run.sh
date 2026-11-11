@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DOCKER="docker"; docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 mkdir -p "$ROOT/docs/evidence"
 PW=$(sudo grep '^ADMIN_PASSWORD=' "$ROOT/.env" | cut -d= -f2)
-$DOCKER run --rm --network host -e ADMIN_PASSWORD="$PW" -e OUT=/evidence \
+$DOCKER run --rm --network host -e ADMIN_PASSWORD="$PW" -e OUT=/evidence -e LEGACY_USER="${LEGACY_USER:-alice}" \
   -v "$ROOT/tests/ui":/t -v "$ROOT/docs/evidence":/evidence -w /t \
   mcr.microsoft.com/playwright:v1.56.0-noble \
   sh -c 'npm install --no-audit --no-fund >/dev/null 2>&1; node ui-test.mjs "$@"' sh "$@"

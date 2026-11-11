@@ -5,9 +5,13 @@ PASS 不正なユーザ名はエラー表示
 PASS 追加ダイアログにVPNパスワード/p12パスワード表示 :: pw=16文字 p12pw=12文字
 PASS VPNパスワードをクリップボードへコピー
 PASS p12パスワードをクリップボードへコピー
-PASS download uitest.p12 :: uitest.p12 4826B
-PASS download uitest.crt.pem :: uitest.crt.pem 1684B
+PASS download uitest.p12 :: uitest.p12 4858B
+PASS download uitest.crt.pem :: uitest.crt.pem 1732B
 PASS download uitest.key.pem :: uitest.key.pem 2484B
+PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 5905B
+PASS Mac用の接続一式が gzip 形式
+PASS download uitest.sswan :: uitest.sswan 8619B
+PASS Android用 .sswan が type=ikev2-cert-eap のJSON
 PASS PEM証明書の形式
 PASS PEM秘密鍵の形式
 PASS p12はDER(0x30)で始まる
@@ -15,7 +19,7 @@ PASS 一覧に新規ユーザが表示
 PASS 再表示: VPNパスワードが追加時と一致
 PASS 再表示: p12パスワードが追加時と一致
 PASS 再表示: コピーボタンで取得したパスワードが一致
-PASS download uitest.p12 :: uitest.p12 4826B
+PASS download uitest.p12 :: uitest.p12 4858B
 PASS download ca.crt :: ca.crt 1870B
 PASS CA証明書の形式
 
@@ -29,10 +33,10 @@ PASS URLから認証情報が除去される
 dl-uitest.crt.pem: OK
 Subject/EKU/期限:
   subject=CN=uitest, O=VPN
-  notAfter=Feb 13 04:16:16 2029 GMT
+  notAfter=Feb 13 05:49:43 2029 GMT
   X509v3 Extended Key Usage: 
       TLS Web Client Authentication
-秘密鍵と証明書の対応: cert=27fe926568e79612 key=27fe926568e79612 MATCH
+秘密鍵と証明書の対応: cert=8e59241f2e5b8614 key=8e59241f2e5b8614 MATCH
 p12(正しいパスワード):
   MAC: sha1, Iteration 2048
   PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
@@ -43,7 +47,7 @@ p12(誤パスワード):
 ### VPN接続: UIで発行した証明書+パスワード
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs c76e91fb_i c2df250a_o and TS 192.168.90.129/32 === 0.0.0.0/0
+[IKE] CHILD_SA c{1} established with SPIs c9f3676c_i cb7915ae_o and TS 192.168.90.129/32 === 0.0.0.0/0
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
@@ -55,7 +59,7 @@ PASS 再発行でパスワードが変わる
 ### VPN接続: 再発行後の新しい証明書+パスワード
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs cf09c276_i c63f4bb5_o and TS 192.168.90.129/32 === 0.0.0.0/0
+[IKE] CHILD_SA c{1} established with SPIs c6cb17bd_i c8baa75f_o and TS 192.168.90.129/32 === 0.0.0.0/0
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
@@ -66,15 +70,15 @@ initiate failed: establishing CHILD_SA 'c' failed
 initiate failed: establishing CHILD_SA 'c' failed
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
-Nov 11 04:16:59 04[CFG] certificate status is good
-Nov 11 04:17:02 04[CFG] certificate was revoked on Nov 11 04:16:43 UTC 2026, reason: unspecified
+Nov 11 05:50:27 02[CFG] certificate was revoked on Nov 11 05:31:17 UTC 2026, reason: unspecified
+Nov 11 05:50:27 02[CFG] certificate status is good
 
 ### C: UIで削除
 PASS 削除後に一覧から消える
-listusers: alice carol bob dave 
+残りのユーザ数: 1 (実ユーザ名は証跡に残さない) / uitest が一覧に無い: yes
 users.conf内の eap-uitest 件数: 0
 サーバ接続定義: rw: IKEv2, no reauthentication, rekeying every 14400s
-CRL:   18 revoked certificates:
+CRL:   51 revoked certificates:
 
 ### VPN接続: 削除済みユーザは拒否される
 == uitest (password: correct)
@@ -98,7 +102,43 @@ PASS 認証情報API: 認証なしは拒否 (HTTP 401)
 PASS 認証情報API: 存在しないユーザは404 (HTTP 404)
 PASS 認証情報API: 不正なユーザ名は404 (HTTP 404)
 PASS 認証情報API: 既存ユーザは200 (HTTP 200)
-PASS 旧発行ユーザ(alice): VPNパスワードあり / p12パスワードは未保存(null)
+PASS 旧発行ユーザ: VPNパスワードあり / p12パスワードは未保存(null)
 PASS CSPヘッダ (script-src 'self')
+
+### クライアント用配布物: Android .sswan / Mac 用一式 (構造検証 + 実際に接続)
+PASS テスト用ユーザ profuser を作成
+PASS Android: .sswan をダウンロード (HTTP 200)
+PASS Android: 旧形式(SANなし)の証明書のユーザでも .sswan を生成できる
+PASS 認証なしでの .sswan 取得は401
+PASS iOS/Mac 標準クライアント用 .mobileconfig は提供しない (404。MFAで動かないため)
+PASS Android: JSONとして正しく読める / uuid は UUIDv4
+PASS Android: type=ikev2-cert-eap (証明書 → ユーザ名/パスワード)
+PASS Android: remote.addr=接続先(VPN_ADDR)、remote.id=サーバFQDN(証明書SAN)
+PASS Android: remote.cert が ca.crt と一致 (Base64 DER)
+PASS Android: local.eap_id がユーザ名
+PASS Android: local.p12 が .p12 パスワードで開け、証明書と秘密鍵を含む
+PASS Android: パスワード(shared_secret等)を埋め込んでいない
+PASS Android風クライアント(.sswan の値: 証明書+EAP)で接続成功
+PASS Android風クライアント: 誤パスワードは拒否
+PASS Mac: 接続一式 (tar.gz) をダウンロード (HTTP 200)
+PASS Mac: 認証なしでの取得は401
+PASS Mac: 一式の内容 (ca.crt / 証明書 / 秘密鍵 / connect.sh / README.txt)
+PASS Mac: 同梱の CA が ca.crt と一致し、クライアント証明書を検証できる
+PASS Mac: 秘密鍵が証明書と対応
+PASS Mac: connect.sh は証明書→EAPの2段階 (ikev2-pub-eap)、接続先=VPN_ADDR、識別名=FQDN
+PASS Mac: VPN パスワードを同梱していない (接続時に入力)
+PASS Mac用一式: connect.sh (charon-cmd, 証明書→パスワード) で接続成功 virtual IP 192.168.90.130
+PASS Mac用一式: 接続時にパスワードの入力を求める
+PASS Mac用一式: 誤パスワードは拒否
+
+### CRL自動更新 (間隔を短くして繰り返し更新されることを確認)
+更新前: CRL番号=105C サーバ側=10:5c
+更新後: CRL番号=105F サーバ側=10:5f
+[crl] CRL更新: crlNumber=0x105D nextUpdate=Dec 11 05:52:17 2026 GMT
+[crl] CRL更新: crlNumber=0x105E nextUpdate=Dec 11 05:52:31 2026 GMT
+[crl] CRL更新: crlNumber=0x105F nextUpdate=Dec 11 05:52:46 2026 GMT
+PASS 自動更新が繰り返し実行された (CRL番号 105C → 105F, 3回)
+PASS サーバが最新のCRLを保持
+PASS サーバ上のCRLは1つだけ (古いCRLが残らない)
 
 完了 (rc=0)

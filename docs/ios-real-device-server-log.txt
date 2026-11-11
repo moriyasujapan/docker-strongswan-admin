@@ -1,0 +1,7 @@
+Nov 11 04:44:52 10[ENC] parsed IKE_AUTH request 1 [ IDi N(INIT_CONTACT) CERTREQ IDr CPRQ(ADDR MASK DHCP DNS ADDR6 DHCP6 DNS6 DOMAIN) N(ESP_TFC_PAD_N) N(NON_FIRST_FRAG) SA TSi TSr N(MOBIKE_SUP) ]
+Nov 11 04:44:52 10[CFG] looking for peer configs matching 192.168.90.10[vpn.example.com]...<client-ip>[user1@vpn.example.com]
+Nov 11 04:44:52 10[IKE] peer requested EAP, config unacceptable
+Nov 11 04:44:52 10[CFG] no alternative config found
+
+# 比較: swanctl クライアント(証明書+EAP)が送る最初のIKE_AUTH (tests/e2e.sh より)
+[ENC] IKE_AUTH request 1 [ IDi CERT N(INIT_CONTACT) CERTREQ IDr AUTH CPRQ(ADDR DNS) SA TSi TSr N(MOBIKE_SUP) N(NO_ADD_ADDR) N(MULT_AUTH) N(EAP_ONLY) N(MSG_ID_SYN_SUP) N(AUTH_FOLLOWS) ]

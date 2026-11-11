@@ -1,6 +1,7 @@
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 [ -f "$ROOT/vpn.env" ] && . "$ROOT/vpn.env"
 VPN_FQDN="${VPN_FQDN:?vpn.env に VPN_FQDN を設定してください}"
+VPN_ADDR="${VPN_ADDR:-$VPN_FQDN}"   # クライアントが接続する宛先 (FQDNが未登録/変動する場合にIPを指定)
 PKI="$ROOT/pki"
 SW="$ROOT/swanctl"
 CONTAINER="${CONTAINER:-strongswan}"

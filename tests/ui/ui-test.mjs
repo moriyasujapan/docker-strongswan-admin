@@ -7,6 +7,7 @@ const BASE = process.env.BASE || 'https://localhost:8443';
 const OUT = process.env.OUT || '/evidence';
 const PASS = process.env.ADMIN_PASSWORD;
 const phase = process.argv[2] || 'A';
+const LEGACY = process.env.LEGACY_USER || 'alice';   // 旧形式(SANなし)の証明書を持つユーザ
 const USER = process.argv[3] || 'uitest';
 const log = [];
 let failed = 0;
@@ -84,6 +85,10 @@ if (phase === 'A') {
   const p12 = await saveDownload(() => dlg.getByRole('button', { name: '.p12' }).click(), `${USER}.p12`);
   const crt = await saveDownload(() => dlg.getByRole('button', { name: '証明書 PEM' }).click(), `${USER}.crt.pem`);
   const key = await saveDownload(() => dlg.getByRole('button', { name: '秘密鍵 PEM' }).click(), `${USER}.key.pem`);
+  const mac = await saveDownload(() => dlg.getByRole('button', { name: 'Mac', exact: true }).click(), `vpn-${USER}-mac.tar.gz`);
+  rec('Mac用の接続一式が gzip 形式', mac[0] === 0x1f && mac[1] === 0x8b);
+  const ss = await saveDownload(() => dlg.getByRole('button', { name: 'Android' }).click(), `${USER}.sswan`);
+  rec('Android用 .sswan が type=ikev2-cert-eap のJSON', JSON.parse(ss.toString()).type === 'ikev2-cert-eap');
   rec('PEM証明書の形式', crt.toString().startsWith('-----BEGIN CERTIFICATE-----'));
   rec('PEM秘密鍵の形式', key.toString().startsWith('-----BEGIN PRIVATE KEY-----'));
   rec('p12はDER(0x30)で始まる', p12[0] === 0x30);
