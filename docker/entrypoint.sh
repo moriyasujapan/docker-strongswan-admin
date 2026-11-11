@@ -1,5 +1,8 @@
 #!/bin/sh
 set -e
+# VPNクライアント同士の通信 (IPsecトンネルに入る通信) は送信元を書き換えない: 相手にクライアントの仮想IPが見える
+iptables -t nat -C POSTROUTING -m policy --dir out --pol ipsec -j ACCEPT 2>/dev/null || \
+  iptables -t nat -I POSTROUTING 1 -m policy --dir out --pol ipsec -j ACCEPT
 # NAT for VPN clients (VPN_POOL must match swanctl pools)
 WAN_IF=$(ip route show default | awk '{print $5; exit}')
 iptables -t nat -C POSTROUTING -s "${VPN_POOL:-192.168.90.128/25}" -o "$WAN_IF" -j MASQUERADE 2>/dev/null || \

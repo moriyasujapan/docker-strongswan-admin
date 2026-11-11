@@ -11,14 +11,15 @@
 | 区分 | 項目数 | 結果 |
 |---|---|---|
 | 管理画面 UI (Playwright) | 27 | **全て PASS** |
-| 管理API 認証/CSRF/入力検証 (curl) | 17 | **全て PASS** |
+| 管理API 認証/CSRF/入力検証 (curl) | 18 | **全て PASS** |
 | クライアント用配布物: Android `.sswan` / Mac 用一式 (構造検証 + 実際に接続) | 29 | **全て PASS** |
 | 回帰: ドット等を含むユーザ名 | 7 | **全て PASS** |
+| VPN クライアント同士の通信 (送信元 IP が見えること) | 3 | **全て PASS** |
 | CRL 自動更新 | 3 | **全て PASS** |
 | ダウンロードファイルの検証 (openssl) / VPN 接続 (UI 発行) | 5 / 8 シナリオ | **期待どおり** |
 | **Mac 実機** (Homebrew の strongSwan) | 手動 | **MFA で接続成功** ([ログ](docs/mac-real-device-log.txt)) |
 
-最終実行: `tests/run-all.sh` → `rc=0`、**PASS 83 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
+最終実行: `tests/run-all.sh` → `rc=0`、**PASS 87 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
 証跡は [docs/evidence/](docs/evidence/) にあります。
 
 > **Mac は標準の VPN 機能ではなく、Homebrew の strongSwan (`charon-cmd`) で接続します。** Apple 標準クライアントは証明書 + パスワードの
@@ -256,6 +257,21 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 
 **注意:** 自動テストでの接続の確認は Linux コンテナ上の `charon-cmd` (Debian 版 strongSwan 6.0.1) で行っている。Mac の実機は手動で確認済み (6章)。
 Android の実機では未確認。ダブルクリック用 / Dock 用の `.command` は、構文の確認のみで macOS 上の動作は未確認。テスト用コンテナでは Debian の `kernel-libipsec` プラグインがカーネル IPsec と競合するため無効にしている (Homebrew 版には含まれない)。
+
+## 5.3 VPN クライアント同士の通信と、VPN 経由のアクセス
+
+テスト: [tests/client-to-client.sh](tests/client-to-client.sh) / 証跡: [client-to-client.txt](docs/evidence/client-to-client.txt)
+
+| 確認内容 | 結果 |
+|---|---|
+| 2 台のクライアントが同時に接続し、別々の仮想 IP を受け取る | PASS |
+| クライアント B → A (仮想 IP 宛て) に TCP 接続できる | PASS |
+| A から見える送信元は B の仮想 IP (VPN サーバの IP に書き換わらない) | PASS |
+| VPN ネットワーク内から、ホスト経由の管理画面 (`192.168.90.1:8443`) に届き、認証を要求する (3章のテストに含む) | PASS |
+
+最初は、クライアント同士の通信でも送信元が VPN サーバの IP (`192.168.90.10`) に書き換わっていた。IPsec トンネルに入る通信を NAT の対象から外して修正した (`docker/entrypoint.sh`)。
+ホストの SSH (`192.168.90.1:22`) に VPN ネットワークから届くことは手動で確認した。Mac 実機からは `192.168.90.10` への ping を確認済み (ユーザによる確認)。
+「VPN ネットワークは全て許可」のファイアウォール設定はホスト側の設定で、リポジトリには含まれない (README に手順を記載)。
 
 ## 5.5 CRL の自動更新
 
