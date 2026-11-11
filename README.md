@@ -39,7 +39,7 @@ swanctl/                  strongSwan設定 (証明書・CRL・users.conf)  ※Gi
 ### クイックスタート (clone → 実行)
 
 ```bash
-git clone <このリポジトリのURL> strongswan && cd strongswan
+git clone https://github.com/moriyasujapan/docker-strongswan-admin.git && cd docker-strongswan-admin
 ./setup.sh --fqdn vpn.example.com     # vpn.env/.env 生成 → PKI生成 → docker compose up → 起動確認
 ```
 
