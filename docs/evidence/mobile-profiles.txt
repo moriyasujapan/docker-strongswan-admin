@@ -8,17 +8,22 @@ PASS Android: type=ikev2-cert-eap (証明書 → ユーザ名/パスワード)
 PASS Android: remote.addr=接続先(VPN_ADDR)、remote.id=サーバFQDN(証明書SAN)
 PASS Android: remote.cert が ca.crt と一致 (Base64 DER)
 PASS Android: local.eap_id がユーザ名
+PASS Android: split-tunneling.subnets が VPN_ROUTES (192.168.90.0/24 のみVPN経由)
 PASS Android: local.p12 が .p12 パスワードで開け、証明書と秘密鍵を含む
 PASS Android: パスワード(shared_secret等)を埋め込んでいない
 PASS Android風クライアント(.sswan の値: 証明書+EAP)で接続成功
+PASS 全通信(0.0.0.0/0)を要求しても、サーバが 192.168.90.0/24 に絞る (スプリットトンネル)
 PASS Android風クライアント: 誤パスワードは拒否
 PASS Mac: 接続一式 (tar.gz) をダウンロード (HTTP 200)
 PASS Mac: 認証なしでの取得は401
-PASS Mac: 一式の内容 (ca.crt / 証明書 / 秘密鍵 / connect.sh / README.txt)
+PASS Mac: 一式の内容 (ca.crt / 証明書 / 秘密鍵 / connect.sh / README.txt / ダブルクリック用・Dock用 .command)
 PASS Mac: 同梱の CA が ca.crt と一致し、クライアント証明書を検証できる
 PASS Mac: 秘密鍵が証明書と対応
 PASS Mac: connect.sh は証明書→EAPの2段階 (ikev2-pub-eap)、接続先=VPN_ADDR、識別名=FQDN
+PASS Mac: connect.sh は 192.168.90.0/24 宛てだけをVPNに通す (--remote-ts)
+PASS Mac: ダブルクリック用/Dock用 .command が実行可能で、シェルの構文として正しい (macOS での動作は未確認)
 PASS Mac: VPN パスワードを同梱していない (接続時に入力)
 PASS Mac用一式: connect.sh (charon-cmd, 証明書→パスワード) で接続成功 virtual IP 192.168.90.130
+PASS Mac用一式: トンネルの宛先は 192.168.90.0/24 のみ
 PASS Mac用一式: 接続時にパスワードの入力を求める
 PASS Mac用一式: 誤パスワードは拒否

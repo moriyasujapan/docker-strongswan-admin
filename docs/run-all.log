@@ -8,9 +8,9 @@ PASS p12パスワードをクリップボードへコピー
 PASS download uitest.p12 :: uitest.p12 4858B
 PASS download uitest.crt.pem :: uitest.crt.pem 1732B
 PASS download uitest.key.pem :: uitest.key.pem 2484B
-PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 5905B
+PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 6662B
 PASS Mac用の接続一式が gzip 形式
-PASS download uitest.sswan :: uitest.sswan 8619B
+PASS download uitest.sswan :: uitest.sswan 8694B
 PASS Android用 .sswan が type=ikev2-cert-eap のJSON
 PASS PEM証明書の形式
 PASS PEM秘密鍵の形式
@@ -33,10 +33,10 @@ PASS URLから認証情報が除去される
 dl-uitest.crt.pem: OK
 Subject/EKU/期限:
   subject=CN=uitest, O=VPN
-  notAfter=Feb 13 05:49:43 2029 GMT
+  notAfter=Feb 13 06:05:46 2029 GMT
   X509v3 Extended Key Usage: 
       TLS Web Client Authentication
-秘密鍵と証明書の対応: cert=8e59241f2e5b8614 key=8e59241f2e5b8614 MATCH
+秘密鍵と証明書の対応: cert=e5678788050bdf06 key=e5678788050bdf06 MATCH
 p12(正しいパスワード):
   MAC: sha1, Iteration 2048
   PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
@@ -47,7 +47,7 @@ p12(誤パスワード):
 ### VPN接続: UIで発行した証明書+パスワード
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs c9f3676c_i cb7915ae_o and TS 192.168.90.129/32 === 0.0.0.0/0
+[IKE] CHILD_SA c{1} established with SPIs c00bc0b8_i cf38eef5_o and TS 192.168.90.129/32 === 192.168.90.0/24
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
@@ -59,7 +59,7 @@ PASS 再発行でパスワードが変わる
 ### VPN接続: 再発行後の新しい証明書+パスワード
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs c6cb17bd_i c8baa75f_o and TS 192.168.90.129/32 === 0.0.0.0/0
+[IKE] CHILD_SA c{1} established with SPIs ce9de3bd_i c5e7ad3b_o and TS 192.168.90.129/32 === 192.168.90.0/24
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
@@ -70,15 +70,15 @@ initiate failed: establishing CHILD_SA 'c' failed
 initiate failed: establishing CHILD_SA 'c' failed
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
-Nov 11 05:50:27 02[CFG] certificate was revoked on Nov 11 05:31:17 UTC 2026, reason: unspecified
-Nov 11 05:50:27 02[CFG] certificate status is good
+Nov 11 06:06:34 05[CFG] certificate was revoked on Nov 11 06:00:47 UTC 2026, reason: unspecified
+Nov 11 06:06:34 05[CFG] certificate was revoked on Nov 11 06:01:15 UTC 2026, reason: unspecified
 
 ### C: UIで削除
 PASS 削除後に一覧から消える
-残りのユーザ数: 1 (実ユーザ名は証跡に残さない) / uitest が一覧に無い: yes
-users.conf内の eap-uitest 件数: 0
+残りのユーザ数: 2 (実ユーザ名は証跡に残さない) / uitest が一覧に無い: yes
+users.conf内の uitest のエントリ数: 0
 サーバ接続定義: rw: IKEv2, no reauthentication, rekeying every 14400s
-CRL:   51 revoked certificates:
+CRL:   60 revoked certificates:
 
 ### VPN接続: 削除済みユーザは拒否される
 == uitest (password: correct)
@@ -116,28 +116,42 @@ PASS Android: type=ikev2-cert-eap (証明書 → ユーザ名/パスワード)
 PASS Android: remote.addr=接続先(VPN_ADDR)、remote.id=サーバFQDN(証明書SAN)
 PASS Android: remote.cert が ca.crt と一致 (Base64 DER)
 PASS Android: local.eap_id がユーザ名
+PASS Android: split-tunneling.subnets が VPN_ROUTES (192.168.90.0/24 のみVPN経由)
 PASS Android: local.p12 が .p12 パスワードで開け、証明書と秘密鍵を含む
 PASS Android: パスワード(shared_secret等)を埋め込んでいない
 PASS Android風クライアント(.sswan の値: 証明書+EAP)で接続成功
+PASS 全通信(0.0.0.0/0)を要求しても、サーバが 192.168.90.0/24 に絞る (スプリットトンネル)
 PASS Android風クライアント: 誤パスワードは拒否
 PASS Mac: 接続一式 (tar.gz) をダウンロード (HTTP 200)
 PASS Mac: 認証なしでの取得は401
-PASS Mac: 一式の内容 (ca.crt / 証明書 / 秘密鍵 / connect.sh / README.txt)
+PASS Mac: 一式の内容 (ca.crt / 証明書 / 秘密鍵 / connect.sh / README.txt / ダブルクリック用・Dock用 .command)
 PASS Mac: 同梱の CA が ca.crt と一致し、クライアント証明書を検証できる
 PASS Mac: 秘密鍵が証明書と対応
 PASS Mac: connect.sh は証明書→EAPの2段階 (ikev2-pub-eap)、接続先=VPN_ADDR、識別名=FQDN
+PASS Mac: connect.sh は 192.168.90.0/24 宛てだけをVPNに通す (--remote-ts)
+PASS Mac: ダブルクリック用/Dock用 .command が実行可能で、シェルの構文として正しい (macOS での動作は未確認)
 PASS Mac: VPN パスワードを同梱していない (接続時に入力)
 PASS Mac用一式: connect.sh (charon-cmd, 証明書→パスワード) で接続成功 virtual IP 192.168.90.130
+PASS Mac用一式: トンネルの宛先は 192.168.90.0/24 のみ
 PASS Mac用一式: 接続時にパスワードの入力を求める
 PASS Mac用一式: 誤パスワードは拒否
 
+### 回帰: ドット等を含むユーザ名でも設定が壊れない
+PASS ドット等を含むユーザ名 (dot.user_x-1) を追加できる
+PASS 追加後もサーバの接続定義 rw が読み込まれている
+PASS 設定ファイルに文法エラーがない
+PASS パスワードを再表示できる
+PASS ドット入りユーザで VPN 接続 (証明書+パスワード) 成功
+PASS 削除できる
+PASS 削除後も接続定義 rw が読み込まれている
+
 ### CRL自動更新 (間隔を短くして繰り返し更新されることを確認)
-更新前: CRL番号=105C サーバ側=10:5c
-更新後: CRL番号=105F サーバ側=10:5f
-[crl] CRL更新: crlNumber=0x105D nextUpdate=Dec 11 05:52:17 2026 GMT
-[crl] CRL更新: crlNumber=0x105E nextUpdate=Dec 11 05:52:31 2026 GMT
-[crl] CRL更新: crlNumber=0x105F nextUpdate=Dec 11 05:52:46 2026 GMT
-PASS 自動更新が繰り返し実行された (CRL番号 105C → 105F, 3回)
+更新前: CRL番号=1072 サーバ側=10:72
+更新後: CRL番号=1075 サーバ側=10:75
+[crl] CRL更新: crlNumber=0x1073 nextUpdate=Dec 11 06:08:28 2026 GMT
+[crl] CRL更新: crlNumber=0x1074 nextUpdate=Dec 11 06:08:43 2026 GMT
+[crl] CRL更新: crlNumber=0x1075 nextUpdate=Dec 11 06:08:57 2026 GMT
+PASS 自動更新が繰り返し実行された (CRL番号 1072 → 1075, 3回)
 PASS サーバが最新のCRLを保持
 PASS サーバ上のCRLは1つだけ (古いCRLが残らない)
 

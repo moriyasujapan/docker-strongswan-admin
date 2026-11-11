@@ -1,8 +1,8 @@
-更新前: CRL番号=105C サーバ側=10:5c
-更新後: CRL番号=105F サーバ側=10:5f
-[crl] CRL更新: crlNumber=0x105D nextUpdate=Dec 11 05:52:17 2026 GMT
-[crl] CRL更新: crlNumber=0x105E nextUpdate=Dec 11 05:52:31 2026 GMT
-[crl] CRL更新: crlNumber=0x105F nextUpdate=Dec 11 05:52:46 2026 GMT
-PASS 自動更新が繰り返し実行された (CRL番号 105C → 105F, 3回)
+更新前: CRL番号=1072 サーバ側=10:72
+更新後: CRL番号=1075 サーバ側=10:75
+[crl] CRL更新: crlNumber=0x1073 nextUpdate=Dec 11 06:08:28 2026 GMT
+[crl] CRL更新: crlNumber=0x1074 nextUpdate=Dec 11 06:08:43 2026 GMT
+[crl] CRL更新: crlNumber=0x1075 nextUpdate=Dec 11 06:08:57 2026 GMT
+PASS 自動更新が繰り返し実行された (CRL番号 1072 → 1075, 3回)
 PASS サーバが最新のCRLを保持
 PASS サーバ上のCRLは1つだけ (古いCRLが残らない)

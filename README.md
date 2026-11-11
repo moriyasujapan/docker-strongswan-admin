@@ -26,6 +26,7 @@ swanctl/                  strongSwan設定 (証明書・CRL・users.conf)  ※Gi
 | Dockerネットワーク `vpn` / ゲートウェイ | 192.168.90.0/24 / 192.168.90.1 |
 | **VPNサーバ(コンテナ)自身** | **192.168.90.10** |
 | VPNクライアントへの払い出しプール | 192.168.90.128/25 (.128〜.254) |
+| **VPN を通る通信 (スプリットトンネル)** | **192.168.90.0/24 宛てのみ** (`VPN_ROUTES`)。それ以外の通信は VPN を通らない |
 
 ## 前提
 
@@ -102,7 +103,7 @@ CLI でも同じ操作ができます: `./scripts/adduser.sh alice` / `moduser.s
 | クライアント | 対応 |
 |---|---|
 | strongSwan (Android 公式アプリ) / Linux swanctl | ○ |
-| **Mac** (Homebrew の strongSwan。下記) | ○ (Mac 実機では未確認) |
+| **Mac** (Homebrew の strongSwan。下記) | ○ (実機で確認済み) |
 | Windows 標準 / iOS・macOS 標準VPN | ✕ 証明書+パスワードの併用不可 (Apple は実機と公式資料で確認。[TEST.md](TEST.md) 6章) |
 
 ### Android (strongSwan アプリ)
@@ -120,7 +121,7 @@ connections {
     local  { auth = pubkey;       certs = alice.crt; id = "CN=alice, O=VPN" }  # 証明書のSubjectと完全一致
     local2 { auth = eap-mschapv2; eap_id = alice;    id = alice }
     remote { auth = pubkey; id = vpn.example.com }
-    children { corp { remote_ts = 0.0.0.0/0; start_action = start } }
+    children { corp { remote_ts = 192.168.90.0/24; start_action = start } }
   }
 }
 secrets { eap-alice { id = alice; secret = "<password>" } }
@@ -136,7 +137,25 @@ Mac 標準の VPN 機能は証明書 + パスワードの併用ができない�
 2. `brew install strongswan` (初回のみ)
 3. 展開したフォルダで `./connect.sh` → Mac の管理者パスワード(sudo) → `EAP password:` に VPN パスワードを入力。切断は Ctrl+C
 
-一式には秘密鍵 (暗号化なし) が入っています。VPN パスワードは入っておらず、接続のたびに入力します。iPhone / iPad では使えません。
+**ダブルクリック / Dock から接続する**
+
+- `VPN-Connect.command` をダブルクリックすると、ターミナルが開いて接続を始めます (初回に警告が出たら、右クリック →「開く」)。
+- `Make-Dock-App.command` をダブルクリックすると `~/Applications/VPN-<user>.app` を作ります。これを Dock にドラッグすると、クリックで接続を始められます。
+  作成後に一式のフォルダを移動・削除すると動かなくなるので、その場合は作り直します。
+- どの方法でも、管理者パスワードと VPN パスワードの入力は毎回必要です (VPN パスワードを保存しないのは MFA を保つため)。
+- この 2 つの `.command` は macOS 上での動作が未確認です。
+
+一式には秘密鍵 (暗号化なし) が入っています。VPN パスワードは入っていません。iPhone / iPad では使えません。
+Mac 実機 (Homebrew の strongSwan 6.1.0) で、証明書 → パスワードの 2 段階認証での接続を確認済みです ([ログ](docs/mac-real-device-log.txt))。
+
+### VPN を通る通信 (VPN_ROUTES)
+
+既定では `192.168.90.0/24` 宛ての通信だけが VPN を通ります (スプリットトンネル)。インターネットなど、それ以外の通信は VPN を通りません。
+クライアントが全通信を要求しても、サーバ側でこの範囲に絞られます。DNS は既定では配りません。
+
+変更する場合: `vpn.env` の `VPN_ROUTES` (カンマ区切りで複数可) と `swanctl/swanctl.conf` の `local_ts` を揃え、
+`docker exec strongswan swanctl --load-all` を実行します。クライアント用の配布物 (`.sswan` / Mac 用一式) は作り直して配り直します。
+クライアントに DNS を配る場合は `vpn.env` の `DNS` と `swanctl.conf` の `pools.vpn-pool.dns` を設定します。
 
 ### 接続先アドレス (VPN_ADDR)
 
@@ -150,6 +169,7 @@ Mac 標準の VPN 機能は証明書 + パスワードの併用ができない�
 - **CRL** の有効期間は30日です。管理画面コンテナが **24時間ごとに自動で再発行** して、サーバへ反映します (`scripts/refresh-crl.sh`)。間隔は `.env` の `CRL_REFRESH_HOURS` で変更できます。
   状況確認: `docker logs strongswan-admin | grep '^\[crl\]'`。手動更新: `./scripts/refresh-crl.sh` (または管理画面コンテナ内で実行)。
 - **証明書の期限**: クライアント/サーバ証明書は825日。期限前に再発行 (サーバ証明書は `swanctl/x509/server.crt` を差し替え)。
+- **ユーザ名**: 英数字と `. _ -` が使えます (例: `first.last`)。
 - **VPNプール変更**: `vpn.env` の `VPN_POOL`、`docker-compose.yml` の `VPN_POOL`、`swanctl/swanctl.conf` の `addrs` を揃える。`192.168.90.1` と `.10` を含めないこと。
 - クライアントの通信はコンテナで MASQUERADE されるため、同一ネットワーク上の他コンテナからは 192.168.90.10 からの通信に見える。
 - 管理画面コンテナは root で動作するため、`pki/` 配下に root 所有のファイルができる。ホストから触るときは `sudo` を使う。

@@ -69,7 +69,8 @@ connections {
     }
     children {
       rw {
-        local_ts = 0.0.0.0/0
+        # VPNに通す宛先 (スプリットトンネル)。クライアントが全通信を要求してもこの範囲に絞られる
+        local_ts = $VPN_ROUTES
         esp_proposals = aes256gcm16-ecp384,aes256-sha256-modp2048,aes256-sha256
       }
     }
@@ -78,7 +79,7 @@ connections {
 pools {
   vpn-pool {
     addrs = ${VPN_POOL:-192.168.90.128/25}
-    dns = ${DNS:-1.1.1.1,8.8.8.8}
+$( [ -n "${DNS:-}" ] && echo "    dns = $DNS" )
   }
 }
 include conf.d/*.conf

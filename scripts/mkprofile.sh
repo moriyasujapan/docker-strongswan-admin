@@ -11,9 +11,9 @@ D="$PKI/clients/$U"
 [ -f "$D/$U.p12" ] && [ -f "$D/$U.crt" ] || { echo "ユーザが存在しません: $U" >&2; exit 1; }
 CA_DER="$(mktemp)"; trap 'rm -f "$CA_DER"' EXIT
 openssl x509 -in "$PKI/ca/ca.crt" -outform DER -out "$CA_DER"
-python3 - "$KIND" "$U" "$VPN_FQDN" "$D/$U.p12" "$CA_DER" "$VPN_ADDR" <<'PY'
+python3 - "$KIND" "$U" "$VPN_FQDN" "$D/$U.p12" "$CA_DER" "$VPN_ADDR" "$VPN_ROUTES" <<'PY'
 import sys, uuid, json, base64
-kind, user, fqdn, p12_path, ca_path, addr = sys.argv[1:7]
+kind, user, fqdn, p12_path, ca_path, addr, routes = sys.argv[1:8]
 p12 = open(p12_path, "rb").read(); ca = open(ca_path, "rb").read()
 if kind == "android":
     prof = {
@@ -22,6 +22,7 @@ if kind == "android":
         "type": "ikev2-cert-eap",
         "remote": {"addr": addr, "id": fqdn, "cert": base64.b64encode(ca).decode()},
         "local": {"eap_id": user, "p12": base64.b64encode(p12).decode()},
+        "split-tunneling": {"subnets": [r.strip() for r in routes.split(",") if r.strip()]},
         "ike-proposal": "aes256-sha256-modp2048",
         "esp-proposal": "aes256-sha256",
     }

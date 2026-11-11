@@ -2,10 +2,10 @@
 dl-uitest.crt.pem: OK
 Subject/EKU/期限:
   subject=CN=uitest, O=VPN
-  notAfter=Feb 13 05:49:43 2029 GMT
+  notAfter=Feb 13 06:05:46 2029 GMT
   X509v3 Extended Key Usage: 
       TLS Web Client Authentication
-秘密鍵と証明書の対応: cert=8e59241f2e5b8614 key=8e59241f2e5b8614 MATCH
+秘密鍵と証明書の対応: cert=e5678788050bdf06 key=e5678788050bdf06 MATCH
 p12(正しいパスワード):
   MAC: sha1, Iteration 2048
   PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
