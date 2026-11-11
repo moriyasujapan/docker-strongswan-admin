@@ -12,18 +12,20 @@
 |---|---|---|
 | 管理画面 UI (Playwright) | 27 | **全て PASS** |
 | 管理API 認証/CSRF/入力検証 (curl) | 17 | **全て PASS** |
-| クライアント用配布物: Android `.sswan` / Mac 用一式 (構造検証 + 実際に接続) | 24 | **全て PASS** (※実機は別記) |
+| クライアント用配布物: Android `.sswan` / Mac 用一式 (構造検証 + 実際に接続) | 29 | **全て PASS** |
+| 回帰: ドット等を含むユーザ名 | 7 | **全て PASS** |
 | CRL 自動更新 | 3 | **全て PASS** |
 | ダウンロードファイルの検証 (openssl) / VPN 接続 (UI 発行) | 5 / 8 シナリオ | **期待どおり** |
+| **Mac 実機** (Homebrew の strongSwan) | 手動 | **MFA で接続成功** ([ログ](docs/mac-real-device-log.txt)) |
 
-最終実行: `tests/run-all.sh` → `rc=0`、**PASS 71 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
+最終実行: `tests/run-all.sh` → `rc=0`、**PASS 83 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
 証跡は [docs/evidence/](docs/evidence/) にあります。
 
 > **Mac は標準の VPN 機能ではなく、Homebrew の strongSwan (`charon-cmd`) で接続します。** Apple 標準クライアントは証明書 + パスワードの
-> 2 段階認証(MFA)に対応していないためです ([詳細](#6-mac-の対応と実機iosmacでの確認結果))。Mac 用一式は Linux コンテナ上の本物の `charon-cmd` で
-> 接続まで確認しましたが、**Mac の実機では未確認**です。
+> 2 段階認証(MFA)に対応していないためです ([詳細](#6-mac-の対応と実機iosmacでの確認結果))。
+> **Mac の実機で、証明書 → パスワードの MFA での接続と、接続後の通信が VPN を通ることを確認済みです。**
 
-> **開発中に実際の不具合を6件発見し修正しました** (後述「発見した不具合と修正」)。いずれも修正後の最終実行で確認済みです。
+> **開発中に実際の不具合を7件発見し修正しました** (後述「発見した不具合と修正」)。いずれも修正後の最終実行で確認済みです。
 
 ## 再実行方法
 
@@ -206,6 +208,15 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 
 - 上記「フェーズ D」参照 (`Request cannot be constructed from a URL that includes credentials`)。API 呼び出しを `location.origin` 基準にして修正。
 
+### 不具合7: ドットを含むユーザ名を追加すると、VPN 全体が止まる (重大)
+
+- **症状**: `first.last` 形式のユーザを追加した後、全ユーザが接続できない (クライアントには `NO_PROPOSAL_CHOSEN`)。Mac 実機の接続テスト中に発覚。
+- **原因**: `users.conf` のセクション名に `eap-<ユーザ名>` を使っていた。strongSwan の設定の文法ではセクション名に `.` を使えず、
+  `syntax error` で設定ファイル全体が無効になり、接続定義とプールがすべてアンロードされた。
+- **修正**: セクション名をユーザ名のハッシュ (`eap-u<hex>`) にし、ユーザ名は `id = "..."` に持たせる。
+  さらに、設定の読み込みに失敗した場合は `adduser.sh` がユーザ追加を取り消してエラーを返す (VPN 全体を止めない)。
+- **確認**: 回帰テスト [tests/dotted-user.sh](tests/dotted-user.sh) (追加・接続・削除の前後で接続定義が残ること) を通しテストに追加。
+
 ### そのほか
 
 - 認証情報をURLに埋め込んで開くと `fetch` が失敗する (`Request cannot be constructed from a URL that includes credentials`)。API 呼び出しを `location.origin` 基準にし、表示後にURLから認証情報を除去するよう修正 (フェーズ D)。URLに認証情報を入れる使い方自体は、履歴等に残るため推奨しない。
@@ -239,10 +250,12 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 | VPN パスワードを同梱していない。接続時に `EAP password:` の入力を求める | PASS |
 | **同梱の `connect.sh` を本物の `charon-cmd` で実行して接続成功** (証明書認証 → パスワード → 仮想IP払い出し) | **成功** |
 | 同: 誤パスワードは拒否 | PASS |
+| スプリットトンネル: `connect.sh` は `--remote-ts 192.168.90.0/24`、`.sswan` は `split-tunneling.subnets`。クライアントが全通信を要求してもサーバが `192.168.90.0/24` に絞る | PASS |
+| ダブルクリック用 (`VPN-Connect.command`) / Dock 用 (`Make-Dock-App.command`) が同梱され、シェルの構文として正しい | PASS (macOS 上の動作は未確認) |
 | iOS/Mac 標準クライアント用 `.mobileconfig` は提供しない (404) | PASS |
 
-**注意:** 接続の確認は Linux コンテナ上の `charon-cmd` (Debian 版 strongSwan 6.0.1) で行った。Mac の実機 (Homebrew 版、カーネルは PF_KEY/pfroute) と
-Android の実機では未確認。テスト用コンテナでは Debian の `kernel-libipsec` プラグインがカーネル IPsec と競合するため無効にしている (Homebrew 版には含まれない)。
+**注意:** 自動テストでの接続の確認は Linux コンテナ上の `charon-cmd` (Debian 版 strongSwan 6.0.1) で行っている。Mac の実機は手動で確認済み (6章)。
+Android の実機では未確認。ダブルクリック用 / Dock 用の `.command` は、構文の確認のみで macOS 上の動作は未確認。テスト用コンテナでは Debian の `kernel-libipsec` プラグインがカーネル IPsec と競合するため無効にしている (Homebrew 版には含まれない)。
 
 ## 5.5 CRL の自動更新
 
@@ -281,12 +294,17 @@ CRL の有効期間(30日)が切れないよう、管理画面コンテナが定
 4. 採用: **Mac に strongSwan 本体を入れ (`brew install strongswan`)、`charon-cmd --profile ikev2-pub-eap` で接続する。** サーバの 2 段階認証は変更しない。
    管理画面の「Mac」ボタンで接続一式をダウンロードできる (5.2 参照)。
 
-制約: iPhone / iPad には使えない。Mac の実機での確認は未実施。
+5. **Mac の実機で確認 (手動)**: Homebrew の strongSwan 6.1.0 (macOS, arm64) で `./connect.sh` を実行し、証明書認証 → `EAP password:` 入力 →
+   EAP-MSCHAPv2 成功 → 仮想 IP の払い出し → トンネル確立まで成功した ([ログ](docs/mac-real-device-log.txt))。
+   接続後、Mac から外部の IP 確認サイトを開くと VPN サーバの IP が表示され、通信が VPN を通ることも確認した (この時点は全通信を VPN に通す設定)。
+6. その後、VPN に通す宛先を `192.168.90.0/24` のみに変更した (スプリットトンネル、`VPN_ROUTES`)。**変更後の設定での Mac 実機の再確認は未実施** (自動テストでは確認済み)。
+
+制約: iPhone / iPad には使えない。
 
 ## 7. 未実施・制約 (正直な記録)
 
-- **実機クライアント**: Android の strongSwan アプリでの `.sswan` の取り込みと接続、Mac 実機 (Homebrew 版) での `connect.sh` は未確認。iPhone / iPad は MFA では接続できない。Windows は未確認。
-- **インターネット到達性**: VPN 接続後の実トラフィック (NAT 経由の外部通信) は未確認。
+- **実機クライアント**: Mac 実機 (Homebrew 版) は確認済み (スプリットトンネル変更後の再確認と、ダブルクリック用 / Dock 用 `.command` は未確認)。Android の strongSwan アプリでの `.sswan` の取り込みと接続は未確認。iPhone / iPad は MFA では接続できない。Windows は未確認。
+- **通信経路**: 現在はスプリットトンネル (`192.168.90.0/24` 宛てのみ VPN 経由)。全通信を通す設定での外部通信は Mac 実機で確認済み。
 - **管理画面の外部遮断**: 8443 を許可IP以外から遮断する設定 (ufw + `DOCKER-USER`) は入れたが、許可外の回線からの接続拒否は未検証 (ホスト自身からの通信は `DOCKER-USER` を通らないため、この環境内では検証できない)。
 - **再起動後の復旧**: ホスト再起動後の自動復旧は未確認。
 - **失効ログの読み方**: `server-revocation.log` には、今回の証明書以外の失効エントリを含む行が複数出る。拒否の結果自体は V-5 のとおりだが、複数行が出る理由は未調査。

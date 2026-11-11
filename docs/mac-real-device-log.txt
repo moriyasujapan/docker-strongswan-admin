@@ -1,0 +1,24 @@
+# Mac 実機での接続ログ (抜粋。ユーザ名は user1、IP アドレスは伏せ字に置き換え)
+# 環境: macOS (Darwin 25.6.0, arm64) / Homebrew の strongSwan 6.1.0 / 接続一式の connect.sh (charon-cmd --profile ikev2-pub-eap)
+# この時点のサーバ設定は全通信 (0.0.0.0/0) をVPNに通す設定。その後 192.168.90.0/24 のみに変更した。
+
+00[DMN] Starting charon-cmd IKE client (strongSwan 6.1.0, Darwin 25.6.0, arm64)
+00[LIB] loaded plugins: charon-cmd pkcs11 nonce x509 revocation constraints pubkey pkcs1 sshkey pem openssl pkcs8 curve25519 kdf curl kernel-pfkey kernel-pfroute socket-default eap-identity eap-md5 eap-gtc eap-mschapv2 eap-peap xauth-generic osx-attr
+05[CFG] selected proposal: IKE:AES_CBC_256/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_2048
+05[IKE] authentication of 'user1@vpn.example.com' (myself) with RSA_EMSA_PKCS1_SHA2_256 successful
+05[IKE] sending end entity cert "CN=user1, O=VPN"
+05[ENC] generating IKE_AUTH request 1 [ IDi CERT N(INIT_CONTACT) CERTREQ IDr AUTH CPRQ(ADDR DNS) ... N(MULT_AUTH) N(EAP_ONLY) N(MSG_ID_SYN_SUP) N(AUTH_FOLLOWS) ]
+07[IKE] authentication of 'vpn.example.com' with RSA_EMSA_PKCS1_SHA2_256 successful
+06[IKE] server requested EAP_IDENTITY (id 0x00), sending 'user1'
+10[IKE] server requested EAP_MSCHAPV2 authentication (id 0x6F)
+EAP password:
+09[IKE] EAP-MS-CHAPv2 succeeded: 'Welcome2strongSwan'
+05[IKE] EAP method EAP_MSCHAPV2 succeeded, MSK established
+13[IKE] authentication of 'vpn.example.com' with EAP successful
+13[IKE] installing new virtual IP 192.168.90.132
+13[LIB] created TUN device: utun4
+13[IKE] IKE_SA cmd[1] established between <client-ip>[user1@vpn.example.com]...<server-ip>[vpn.example.com]
+13[CFG] selected proposal: ESP:AES_CBC_256/HMAC_SHA2_256_128/NO_EXT_SEQ
+13[IKE] CHILD_SA cmd{1} established with SPIs c46cbd78_i ceaf600a_o and TS 192.168.90.132/32 === 0.0.0.0/0
+
+# 接続後、Mac から外部のIP確認サイトにアクセスすると VPN サーバのIPが表示された (通信がVPN経由であることを確認)

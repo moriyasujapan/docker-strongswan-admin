@@ -99,7 +99,7 @@ def api_credentials(u):
     if not USER_RE.match(u) or u not in [x for x, _ in users()]:
         abort(404)
     conf = open(f"{ROOT}/swanctl/conf.d/users.conf", encoding="utf-8").read()
-    m = re.search(r"eap-" + re.escape(u) + r' \{\s*id = [^\n]*\n\s*secret = "([^"\n]*)"', conf)
+    m = re.search(r'\n    id = "?' + re.escape(u) + r'"?\n\s*secret = "([^"\n]*)"', conf)
     if not m:
         abort(404)
     p12pw = None

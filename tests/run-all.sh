@@ -33,7 +33,7 @@ sudo docker logs strongswan 2>&1 | grep -E "certificate was revoked|certificate 
 
 step "C: UIで削除";                                             tests/ui/run.sh C $U 2>&1 | tee $E/ui-phase-C.out || rc=1
 { echo "残りのユーザ数: $(./scripts/listusers.sh | wc -l) (実ユーザ名は証跡に残さない) / $U が一覧に無い: $(./scripts/listusers.sh | grep -qx "$U" && echo NO || echo yes)"
-  echo "users.conf内の eap-$U 件数: $(sudo grep -c "eap-$U" swanctl/conf.d/users.conf || true)"
+  echo "users.conf内の $U のエントリ数: $(sudo grep -cE "^    id = \"?$U\"?\$" swanctl/conf.d/users.conf || true)"
   echo "サーバ接続定義: $(sudo docker exec strongswan swanctl --list-conns 2>&1 | grep -E '^rw')"
   echo "CRL: $(sudo docker exec strongswan swanctl --list-certs --type x509_crl 2>&1 | grep -E 'revoked certificates' | tail -1)"; } | tee $E/server-after-delete.txt
 step "VPN接続: 削除済みユーザは拒否される"
@@ -44,6 +44,9 @@ tests/api-security.sh 2>&1 | tee $E/api-security.txt || rc=1
 
 step "クライアント用配布物: Android .sswan / Mac 用一式 (構造検証 + 実際に接続)"
 tests/mobile-profiles.sh 2>&1 | grep -v "plugin '" | tee $E/mobile-profiles.txt || rc=1
+
+step "回帰: ドット等を含むユーザ名でも設定が壊れない"
+tests/dotted-user.sh 2>&1 | grep -v "plugin '" | tee $E/dotted-user.txt || rc=1
 
 step "CRL自動更新 (間隔を短くして繰り返し更新されることを確認)"
 tests/crl-refresh.sh 2>&1 | grep -v "plugin '" | tee $E/crl-refresh.txt || rc=1

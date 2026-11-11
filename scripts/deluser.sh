@@ -10,7 +10,7 @@ openssl crl -in ca.crl -outform DER -out "$SW/x509crl/ca.crl"
 python3 - "$SW/conf.d/users.conf" "$U" <<'PY'
 import re,sys
 f,u=sys.argv[1:]; s=open(f).read()
-s=re.sub(r"secrets \{\n  eap-%s \{.*?\n  \}\n\}\n"%re.escape(u),"",s,flags=re.S)
+s=re.sub(r'secrets \{\n  eap-[^\s{]+ \{\n    id = "?%s"?\n.*?\n  \}\n\}\n'%re.escape(u),"",s,flags=re.S)
 open(f,"w").write(s)
 PY
 mv "$D" "$PKI/clients/.revoked-$U-$(date +%s)"
