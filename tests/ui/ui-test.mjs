@@ -7,6 +7,7 @@ const BASE = process.env.BASE || 'https://localhost:8443';
 const OUT = process.env.OUT || '/evidence';
 const PASS = process.env.ADMIN_PASSWORD;
 const phase = process.argv[2] || 'A';
+const LEGACY = process.env.LEGACY_USER || 'alice';   // 旧形式(SANなし)の証明書を持つユーザ
 const USER = process.argv[3] || 'uitest';
 const log = [];
 let failed = 0;
@@ -84,6 +85,10 @@ if (phase === 'A') {
   const p12 = await saveDownload(() => dlg.getByRole('button', { name: '.p12' }).click(), `${USER}.p12`);
   const crt = await saveDownload(() => dlg.getByRole('button', { name: '証明書 PEM' }).click(), `${USER}.crt.pem`);
   const key = await saveDownload(() => dlg.getByRole('button', { name: '秘密鍵 PEM' }).click(), `${USER}.key.pem`);
+  const mc = await saveDownload(() => dlg.getByRole('button', { name: 'iOS/Mac' }).click(), `${USER}.mobileconfig`);
+  rec('iOS/Mac用 .mobileconfig が構成プロファイル(plist)', mc.toString().includes('com.apple.vpn.managed') && mc.toString().includes('<plist'));
+  const ss = await saveDownload(() => dlg.getByRole('button', { name: 'Android' }).click(), `${USER}.sswan`);
+  rec('Android用 .sswan が type=ikev2-cert-eap のJSON', JSON.parse(ss.toString()).type === 'ikev2-cert-eap');
   rec('PEM証明書の形式', crt.toString().startsWith('-----BEGIN CERTIFICATE-----'));
   rec('PEM秘密鍵の形式', key.toString().startsWith('-----BEGIN PRIVATE KEY-----'));
   rec('p12はDER(0x30)で始まる', p12[0] === 0x30);
@@ -107,6 +112,12 @@ if (phase === 'A') {
   await view.getByRole('button', { name: 'コピー' }).nth(0).click();
   rec('再表示: コピーボタンで取得したパスワードが一致', (await page.evaluate(() => navigator.clipboard.readText())) === vpnPw);
   await view.getByRole('button', { name: '閉じる' }).click();
+
+  // 旧形式の証明書(SANなし)のユーザは iOS/Mac 用を作れない → 理由を表示
+  await page.getByRole('row', { name: new RegExp(LEGACY) }).getByRole('button', { name: 'iOS/Mac' }).click();
+  await page.getByText('旧形式(SANなし)').waitFor();
+  rec('旧形式の証明書ユーザの iOS/Mac 用は「再発行してください」と表示', true);
+  await shot(page, '05c-legacy-cert-warning');
 
   // 一覧からのダウンロード + CA
   await saveDownload(() => row.getByRole('button', { name: '.p12' }).click(), `${USER}.p12`);

@@ -8,7 +8,11 @@ PASS="${2:-$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-16)}"
 P12PASS="$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-12)"
 D="$PKI/clients/$U"; mkdir -p "$D"; cd "$PKI/ca"
 openssl req -newkey rsa:3072 -nodes -keyout "$D/$U.key" -out "$D/$U.csr" -subj "/O=VPN/CN=$U" 2>/dev/null
-openssl ca -batch -config ca.cnf -extensions ext_client -in "$D/$U.csr" -out "$D/$U.crt" -notext 2>/dev/null
+# SAN(メール形式 user@FQDN)はユーザごとの拡張ファイルで渡す。ca.cnf に環境変数参照を置くと gencrl/revoke でも展開されて失敗する
+EXTF="$(mktemp)"; trap 'rm -f "$EXTF"' EXIT
+printf '[ext_client]\nbasicConstraints=CA:FALSE\nkeyUsage=digitalSignature\nextendedKeyUsage=clientAuth\n' > "$EXTF"
+[ "${ADDUSER_NO_SAN:-}" = 1 ] || printf 'subjectAltName=email:%s@%s\n' "$U" "$VPN_FQDN" >> "$EXTF"   # ADDUSER_NO_SAN=1 はテスト用(旧形式の証明書を再現)
+openssl ca -batch -config ca.cnf -extfile "$EXTF" -extensions ext_client -in "$D/$U.csr" -out "$D/$U.crt" -notext 2>/dev/null
 openssl pkcs12 -export -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1 -inkey "$D/$U.key" -in "$D/$U.crt" -certfile ca.crt -name "$U" \
   -out "$D/$U.p12" -passout "pass:$P12PASS"
 printf %s "$P12PASS" > "$D/$U.p12pass"   # 管理画面での再表示用

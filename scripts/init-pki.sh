@@ -70,7 +70,7 @@ connections {
     children {
       rw {
         local_ts = 0.0.0.0/0
-        esp_proposals = aes256gcm16-ecp384,aes256-sha256
+        esp_proposals = aes256gcm16-ecp384,aes256-sha256-modp2048,aes256-sha256
       }
     }
   }

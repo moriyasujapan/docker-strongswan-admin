@@ -128,10 +128,22 @@ def assets(f):
     return send_from_directory(f"{STATIC}/assets", f)
 
 
+PROFILES = {"mobileconfig": ("apple", "application/x-apple-aspen-config"),
+            "sswan": ("android", "application/vnd.strongswan.profile")}
+
+
 @app.get("/dl/<u>.<ext>")
 def download(u, ext):
-    if not USER_RE.match(u) or ext not in ("p12", "crt", "key") or u not in [x for x, _ in users()]:
+    if not USER_RE.match(u) or ext not in ("p12", "crt", "key", *PROFILES) or u not in [x for x, _ in users()]:
         abort(404)
+    if ext in PROFILES:  # iOS/Mac (.mobileconfig) / Android strongSwan (.sswan)
+        kind, mime = PROFILES[ext]
+        rc, out, err = run("mkprofile.sh", kind, u)
+        if rc == 2:
+            return Response(err.strip(), 409, mimetype="text/plain; charset=utf-8")
+        if rc != 0:
+            return Response((err or out).strip() or "生成に失敗しました", 500, mimetype="text/plain; charset=utf-8")
+        return Response(out, mimetype=mime, headers={"Content-Disposition": f'attachment; filename="{u}.{ext}"'})
     path = f"{PKI}/clients/{u}/{u}.{ext}"
     if not os.path.isfile(path):
         abort(404)

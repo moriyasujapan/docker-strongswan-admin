@@ -101,7 +101,7 @@ CLI でも同じ操作ができます: `./scripts/adduser.sh alice` / `moduser.s
 | クライアント | 対応 |
 |---|---|
 | strongSwan (Android 公式アプリ) / Linux swanctl | ○ |
-| Windows 標準 / iOS・macOS 標準VPN | ✕ (証明書+パスワードの同時利用不可) |
+| Windows 標準 / **iOS・macOS 標準VPN** | **✕** 証明書+パスワードの同時利用不可 (iOS/Mac は実機で確認済み: 認証方式は「証明書」か「ユーザ名」のどちらかしか選べず、証明書を送らずEAPのみを要求した。[証跡](docs/ios-real-device-server-log.txt)) |
 
 ### Android (strongSwan アプリ)
 1. `ca.crt` と `<user>.p12` を端末に転送し、アプリで p12 をインポート (p12パスワード入力)
@@ -125,6 +125,18 @@ secrets { eap-alice { id = alice; secret = "<password>" } }
 ```
 `x509ca/ca.crt`, `x509/alice.crt`, `private/alice.key` を `/etc/swanctl/` に配置。
 pubkey側の `id` は証明書 Subject と **属性の順序まで一致** が必要です (`openssl x509 -subject -noout`)。
+
+### iOS/Mac 用プロファイル (.mobileconfig) について
+
+管理画面の「iOS/Mac」ボタンは `.mobileconfig` を生成しますが、**このサーバの2段階認証では接続できません** (上記)。
+iOS/Mac を使うには、サーバに「EAP のみ(パスワードのみ)」または「証明書のみ」の接続を追加する必要があり、
+その場合は認証が1要素になります (未実装・要判断)。プロファイルは、その場合の土台として残してあります。
+
+### 接続先アドレス (VPN_ADDR)
+
+`vpn.env` の `VPN_ADDR` に接続先 (IP 可) を指定すると、プロファイルの接続先に使われます。
+証明書の SAN と識別名は `VPN_FQDN` のままです (IP を `VPN_FQDN` にしない)。FQDN が未登録/変動する環境向けです。
+`./setup.sh --fqdn vpn.example.com --addr 203.0.113.10` でも指定できます。
 
 ## 4. 運用
 

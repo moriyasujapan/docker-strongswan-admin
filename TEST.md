@@ -10,25 +10,29 @@
 
 | 区分 | 項目数 | 結果 |
 |---|---|---|
-| 管理画面 UI (Playwright) | 23 | **全て PASS** |
+| 管理画面 UI (Playwright) | 28 | **全て PASS** |
 | 管理API 認証/CSRF/入力検証 (curl) | 17 | **全て PASS** |
-| ダウンロードファイルの検証 (openssl) | 5 | **全て OK** |
-| VPN 接続 (UI で発行した資格情報) | 8 シナリオ | **期待どおり** |
+| iOS/Mac・Android プロファイル (構造検証 + プロファイルの値での接続) | 28 | **全て PASS** (※実機は別記) |
+| CRL 自動更新 | 3 | **全て PASS** |
+| ダウンロードファイルの検証 (openssl) / VPN 接続 (UI 発行) | 5 / 8 シナリオ | **期待どおり** |
 
-最終実行: `tests/run-all.sh` → `rc=0`、PASS 40 件 / FAIL 0 件 (ログ: [docs/run-all.log](docs/run-all.log))。
+最終実行: `tests/run-all.sh` → `rc=0`、**PASS 76 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
 証跡は [docs/evidence/](docs/evidence/) にあります。
 
-> **開発中に実際の不具合を3件発見し修正しました** (後述「発見した不具合」)。いずれも修正後の最終実行で確認済みです。
+> **実機の iOS/Mac では、証明書 + パスワードの 2 段階認証は動きませんでした** ([詳細](#6-実機ios-macでの確認結果))。
+> 上の「プロファイル 28 項目 PASS」は、プロファイルの構造と、同じ値を使った swanctl クライアントでの接続の確認であり、Apple の実機の動作を保証しません。
+
+> **開発中に実際の不具合を6件発見し修正しました** (後述「発見した不具合と修正」)。いずれも修正後の最終実行で確認済みです。
 
 ## 再実行方法
 
 ```bash
 docker compose up -d --build        # init-pki.sh 済み / .env 設定済みであること
 ./tests/run-all.sh                  # 全テスト。結果は docs/evidence/ に保存 (秘密鍵・p12は保存しない)
-# 個別: tests/ui/run.sh A|B|C [user]   tests/api-security.sh   tests/e2e.sh <user...>
+# 個別: tests/ui/run.sh A|B|C|D [user]  tests/api-security.sh  tests/mobile-profiles.sh  tests/crl-refresh.sh  tests/e2e.sh <user...>
 ```
 
-テストは `uitest` ユーザを作成・再発行・削除します (既存ユーザには触れません)。
+テストは `uitest` / `profuser` と、旧形式(SANなし)の証明書を持つ使い捨てユーザ(`legacy*`)を自分で作成し、終了時に削除します (既存ユーザには触れません。既存ユーザの有無に依存しません)。
 
 ---
 
@@ -182,6 +186,25 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 - **修正**: `scripts/common.sh` の `reload()` で `swanctl --flush-certs --type x509_crl` を実行してから `--load-all`。
 - **確認**: 再発行・削除の直後に旧証明書が拒否される (V-5, V-6)。
 
+### 不具合4: ユーザの再発行・削除・CRL更新がすべて失敗する (重大 / 自分の変更による回帰)
+
+- **症状**: 管理画面の「再発行」「削除」が `処理に失敗しました` で失敗 (CRL の定期更新も失敗)。
+- **原因**: iOS/Mac 用にクライアント証明書へ SAN を入れるため `ca.cnf` に `subjectAltName=$ENV::CLIENT_SAN` を追加した。
+  OpenSSL は **どのコマンドでも設定ファイル全体を展開**するため、`CLIENT_SAN` を設定しない `openssl ca -gencrl` / `-revoke`
+  が `variable has no value` で失敗した (ユーザ追加だけは変数を渡すので成功)。
+- **修正**: `ca.cnf` から環境変数参照を除去し、SAN はユーザごとの拡張ファイル (`-extfile`) で渡す。
+- **確認**: 再発行・削除・CRL 自動更新を含む通しテストが PASS。ユーザが管理画面で再発行を試して失敗に気づいた。
+- **反省**: SAN 変更の直後に通しテストを回さなかった。以降は変更のたびに `tests/run-all.sh` を実行する。
+
+### 不具合5: テストが「既存ユーザ alice の存在」に依存していた
+
+- **症状**: ユーザが alice 等を削除した後、通しテストの一部が失敗 (旧形式証明書ユーザを alice で代用していたため)。
+- **修正**: テストが旧形式(SANなし)ユーザを自分で作成・削除する (`tests/legacy-user.sh`、`ADDUSER_NO_SAN=1` のテスト用フック)。
+
+### 不具合6: 認証情報付きURLで開くと画面が動かない
+
+- 上記「フェーズ D」参照 (`Request cannot be constructed from a URL that includes credentials`)。API 呼び出しを `location.origin` 基準にして修正。
+
 ### そのほか
 
 - 認証情報をURLに埋め込んで開くと `fetch` が失敗する (`Request cannot be constructed from a URL that includes credentials`)。API 呼び出しを `location.origin` 基準にし、表示後にURLから認証情報を除去するよう修正 (フェーズ D)。URLに認証情報を入れる使い方自体は、履歴等に残るため推奨しない。
@@ -191,6 +214,24 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 - `.p12` は OpenSSL 3 の既定 (AES-256/PBKDF2) だと古い macOS/Windows/Android で開けないことがあるため、3DES/SHA1 (`-certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1`) で書き出す。
 
 ---
+
+## 5.2 iOS/Mac (.mobileconfig) と Android (.sswan) プロファイル
+
+テスト: [tests/mobile-profiles.sh](tests/mobile-profiles.sh) / 証跡: [mobile-profiles.txt](docs/evidence/mobile-profiles.txt)
+形式は strongSwan 公式の [プロファイル仕様](https://docs.strongswan.org/docs/latest/os/androidVpnClientProfiles.html) (`.sswan`) と Apple の IKEv2 ペイロード (`.mobileconfig`) に従う。
+
+| 確認内容 | 結果 |
+|---|---|
+| 管理画面で作った新規ユーザの `.mobileconfig` / `.sswan` をダウンロードできる (HTTP 200、未認証は401) | PASS |
+| 旧形式(SANなし)の証明書: iOS/Mac 用は 409 で「再発行してください」、Android 用は生成できる | PASS |
+| `.mobileconfig`: plist として正しい、CA/PKCS12/VPN の3ペイロード、`PayloadCertificateUUID` が PKCS12 を指す、UUID が重複しない | PASS |
+| `.mobileconfig`: `RemoteAddress`=接続先(`VPN_ADDR`)、`RemoteIdentifier`=FQDN(証明書SAN)、`LocalIdentifier`=証明書SANのメール | PASS |
+| `.sswan`: JSON、`type=ikev2-cert-eap`、`remote.addr`=接続先、`remote.id`=FQDN、`local.eap_id`=ユーザ名、uuid が v4 | PASS |
+| 両方: 埋め込み CA が `ca.crt` と一致、`.p12` が `.p12` パスワードで開ける(証明書+秘密鍵)、パスワードは埋め込まない | PASS |
+| プロファイルの値だけを使った swanctl クライアントで接続 (iOS風: ID=メールSAN / IKE=AES256-SHA2_256-DH14 / ESP+PFS、Android風: ID=証明書DN) | **成功** |
+| 同: 誤パスワードは拒否 | PASS |
+
+**注意:** 最後の2項目は swanctl クライアントでの確認であり、Apple / Android の実クライアントの動作ではない。
 
 ## 5.5 CRL の自動更新
 
@@ -208,9 +249,29 @@ CRL の有効期間(30日)が切れないよう、管理画面コンテナが定
 
 ---
 
-## 6. 未実施・制約 (正直な記録)
+## 6. 実機(iOS/Mac)での確認結果
 
-- **実機クライアント**: Android strongSwan アプリ、Windows/macOS での .p12 の取り込みは未確認。接続テストは Linux の swanctl クライアント(同一Dockerネットワーク)のみ。
+ユーザが `.mobileconfig` を iOS/Mac に取り込み、接続を試した。サーバ側のログ ([docs/ios-real-device-server-log.txt](docs/ios-real-device-server-log.txt)、クライアントIPは伏せ字):
+
+```
+IKE_AUTH request 1 [ IDi N(INIT_CONTACT) CERTREQ IDr CPRQ(...) SA TSi TSr N(MOBIKE_SUP) ]   ← CERT も AUTH も無い
+looking for peer configs matching ...[user1@vpn.example.com]
+peer requested EAP, config unacceptable
+no alternative config found
+```
+
+比較: swanctl クライアント(証明書+EAP)が送る最初の IKE_AUTH は `IDi CERT ... AUTH ... N(EAP_ONLY) ...` で、`CERT` と `AUTH` を含む。
+
+- 端末は**クライアント証明書を送らず、EAP のみを要求**した。サーバの設定(証明書 → パスワードの2段階を必須)では受け付けられず、接続できない。
+- **原因は「Apple 標準クライアントが証明書 + パスワードの2段階認証(複数認証ラウンド)を扱えない」ことで確定。**
+  ユーザの確認: 端末の VPN 設定画面で、認証方式は「証明書」か「ユーザ名」のどちらかしか選べない (EAP を有効にしても同じ)。
+  サーバログ (`CERT` / `AUTH` が無く EAP のみを要求) とも一致する。プロファイルの書き方では解決できない。
+- 取り込み時のエラーの文言は未確認 (スクリーンショットを共有してもらったが、データが大きく読み取れなかった)。
+- 対応案 (いずれも未実装・要判断): EAP-MSCHAPv2 のみの接続を追加 (パスワードのみ) / 証明書のみの接続を追加 / iOS/Mac は対象外にする。
+
+## 7. 未実施・制約 (正直な記録)
+
+- **実機クライアント**: Android の strongSwan アプリでの `.sswan` / `.p12` の取り込みと接続は未確認 (Android 風の swanctl クライアントでの確認のみ)。iOS/Mac は上記のとおり実機で接続できなかった。Windows は未確認。
 - **インターネット到達性**: VPN 接続後の実トラフィック (NAT 経由の外部通信) は未確認。
 - **管理画面の外部遮断**: 8443 を許可IP以外から遮断する設定 (ufw + `DOCKER-USER`) は入れたが、許可外の回線からの接続拒否は未検証 (ホスト自身からの通信は `DOCKER-USER` を通らないため、この環境内では検証できない)。
 - **再起動後の復旧**: ホスト再起動後の自動復旧は未確認。

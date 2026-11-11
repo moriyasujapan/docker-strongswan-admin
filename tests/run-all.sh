@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 DOCKER="docker"; docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 E=docs/evidence; U=uitest
 sudo rm -rf "$E"; mkdir -p "$E"; sudo rm -rf pki/clients/.revoked-$U-*
+. tests/legacy-user.sh; legacy_setup; sudo rm -rf pki/clients/.revoked-legacy*
 rc=0; step(){ echo; echo "### $*"; }
 strip(){ grep -v "plugin '" ; }
 
@@ -31,7 +32,7 @@ CERT_DIR=$OLD tests/e2e.sh $U 2>&1 | strip | tee $E/vpn-login-revoked-cert.log
 sudo docker logs strongswan 2>&1 | grep -E "certificate was revoked|certificate status is good" | tail -2 | tee $E/server-revocation.log
 
 step "C: UIで削除";                                             tests/ui/run.sh C $U 2>&1 | tee $E/ui-phase-C.out || rc=1
-{ echo "listusers: $(./scripts/listusers.sh | tr '\n' ' ')"
+{ echo "残りのユーザ数: $(./scripts/listusers.sh | wc -l) (実ユーザ名は証跡に残さない) / $U が一覧に無い: $(./scripts/listusers.sh | grep -qx "$U" && echo NO || echo yes)"
   echo "users.conf内の eap-$U 件数: $(sudo grep -c "eap-$U" swanctl/conf.d/users.conf || true)"
   echo "サーバ接続定義: $(sudo docker exec strongswan swanctl --list-conns 2>&1 | grep -E '^rw')"
   echo "CRL: $(sudo docker exec strongswan swanctl --list-certs --type x509_crl 2>&1 | grep -E 'revoked certificates' | tail -1)"; } | tee $E/server-after-delete.txt
@@ -41,10 +42,15 @@ CERT_DIR=$(ls -d pki/clients/.revoked-$U-* | sort | tail -1) tests/e2e.sh $U 2>&
 step "管理APIの認証/CSRF/入力検証"
 tests/api-security.sh 2>&1 | tee $E/api-security.txt || rc=1
 
+step "iOS/Mac・Androidプロファイル (構造検証 + プロファイルの値での接続)"
+tests/mobile-profiles.sh 2>&1 | grep -v "plugin '" | tee $E/mobile-profiles.txt || rc=1
+
 step "CRL自動更新 (間隔を短くして繰り返し更新されることを確認)"
 tests/crl-refresh.sh 2>&1 | grep -v "plugin '" | tee $E/crl-refresh.txt || rc=1
 
+legacy_teardown; sudo rm -rf pki/clients/.revoked-legacy*
+
 # 秘密情報を含むファイルは証跡に残さない
-sudo rm -f $E/.creds-* $E/dl-*.key.pem $E/dl-*.p12
+sudo rm -f $E/.creds-* $E/dl-*.key.pem $E/dl-*.p12 $E/dl-*.mobileconfig $E/dl-*.sswan
 sudo chown -R "$USER:$USER" $E 2>/dev/null
 echo; echo "完了 (rc=$rc)"; exit $rc

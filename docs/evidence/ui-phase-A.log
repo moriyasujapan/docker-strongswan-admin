@@ -3,9 +3,13 @@ PASS 不正なユーザ名はエラー表示
 PASS 追加ダイアログにVPNパスワード/p12パスワード表示 :: pw=16文字 p12pw=12文字
 PASS VPNパスワードをクリップボードへコピー
 PASS p12パスワードをクリップボードへコピー
-PASS download uitest.p12 :: uitest.p12 4826B
-PASS download uitest.crt.pem :: uitest.crt.pem 1684B
+PASS download uitest.p12 :: uitest.p12 4858B
+PASS download uitest.crt.pem :: uitest.crt.pem 1732B
 PASS download uitest.key.pem :: uitest.key.pem 2484B
+PASS download uitest.mobileconfig :: uitest.mobileconfig 12503B
+PASS iOS/Mac用 .mobileconfig が構成プロファイル(plist)
+PASS download uitest.sswan :: uitest.sswan 8619B
+PASS Android用 .sswan が type=ikev2-cert-eap のJSON
 PASS PEM証明書の形式
 PASS PEM秘密鍵の形式
 PASS p12はDER(0x30)で始まる
@@ -13,6 +17,7 @@ PASS 一覧に新規ユーザが表示
 PASS 再表示: VPNパスワードが追加時と一致
 PASS 再表示: p12パスワードが追加時と一致
 PASS 再表示: コピーボタンで取得したパスワードが一致
-PASS download uitest.p12 :: uitest.p12 4826B
+PASS 旧形式の証明書ユーザの iOS/Mac 用は「再発行してください」と表示
+PASS download uitest.p12 :: uitest.p12 4858B
 PASS download ca.crt :: ca.crt 1870B
 PASS CA証明書の形式
