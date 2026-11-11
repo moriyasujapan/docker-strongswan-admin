@@ -1,5 +1,5 @@
 #!/bin/bash
-# 使い方: deluser.sh <username>  -> 証明書失効 + パスワード削除
+# 使い方: deluser.sh <username>  -> 証明書失効 + パスワード削除 + 接続中のセッションを切断
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
 U="${1:?username}"; D="$PKI/clients/$U"; [ -f "$D/$U.crt" ] || { echo "不明なユーザ"; exit 1; }
@@ -14,4 +14,6 @@ s=re.sub(r'secrets \{\n  eap-[^\s{]+ \{\n    id = "?%s"?\n.*?\n  \}\n\}\n'%re.es
 open(f,"w").write(s)
 PY
 mv "$D" "$PKI/clients/.revoked-$U-$(date +%s)"
-reload; echo "失効完了: $U"
+reload
+kill_sessions "$U"   # 既につながっている接続も即時に切る (失効だけでは再認証まで使えてしまう)
+echo "失効完了: $U"

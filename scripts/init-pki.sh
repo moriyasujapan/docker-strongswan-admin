@@ -53,6 +53,7 @@ connections {
     version = 2
     proposals = aes256gcm16-prfsha384-ecp384,aes256-sha256-modp2048,aes256-sha256-ecp256
     pools = vpn-pool
+    dpd_delay = 30s   # 応答のない端末のセッションを自動で片付ける (死活監視)
     local {
       auth = pubkey
       certs = server.crt

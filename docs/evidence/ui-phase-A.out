@@ -6,7 +6,7 @@ PASS p12パスワードをクリップボードへコピー
 PASS download uitest.p12 :: uitest.p12 4858B
 PASS download uitest.crt.pem :: uitest.crt.pem 1732B
 PASS download uitest.key.pem :: uitest.key.pem 2484B
-PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 6660B
+PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 6662B
 PASS Mac用の接続一式が gzip 形式
 PASS download uitest.sswan :: uitest.sswan 8694B
 PASS Android用 .sswan が type=ikev2-cert-eap のJSON

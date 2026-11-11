@@ -116,8 +116,8 @@ sudo ufw allow from 192.168.90.0/24
 | パスワード表示 | 一覧の「パスワード」ボタンで、VPN パスワードと .p12 パスワードをいつでも再表示・コピーできる (旧版で発行したユーザの .p12 パスワードは「未保存」。再発行で保存される) |
 | ダウンロード (端末別) | Android: `.sswan` (strongSwan アプリ用。取り込み時に .p12 パスワード、接続時に VPN パスワードを入力) / Mac: 接続一式 (下記「Mac」) |
 | ダウンロード | `.p12`(証明書+秘密鍵+CA。旧クライアント互換の3DES/SHA1) / 証明書PEM(`<user>.crt.pem`) / 秘密鍵PEM(`<user>.key.pem`) / CA証明書(`ca.crt`) |
-| 再発行 | 旧証明書を失効し、新しい証明書とパスワードを発行 (`moduser.sh`) |
-| 削除 | 証明書を失効(CRL)し、パスワードを削除 (`deluser.sh`) |
+| 再発行 | 旧証明書を失効し、新しい証明書とパスワードを発行 (`moduser.sh`)。**そのユーザの接続中のセッションは即時に切断** |
+| 削除 | 証明書を失効(CRL)し、パスワードを削除 (`deluser.sh`)。**そのユーザの接続中のセッションは即時に切断** |
 
 操作は即時にサーバへ反映されます (再起動不要。vici ソケット経由で `swanctl --load-all`)。
 CLI でも同じ操作ができます: `./scripts/adduser.sh alice` / `moduser.sh alice` / `deluser.sh alice` / `listusers.sh`。
@@ -200,6 +200,8 @@ Mac 実機 (Homebrew の strongSwan 6.1.0) で、証明書 → パスワード�
   状況確認: `docker logs strongswan-admin | grep '^\[crl\]'`。手動更新: `./scripts/refresh-crl.sh` (または管理画面コンテナ内で実行)。
 - **証明書の期限**: クライアント/サーバ証明書は825日。期限前に再発行 (サーバ証明書は `swanctl/x509/server.crt` を差し替え)。
 - **ユーザ名**: 英数字と `. _ -` が使えます (例: `first.last`)。
+- **セッションの切断**: ユーザの削除・再発行を行うと、そのユーザの接続中のセッションをサーバ側から即時に切断します (失効だけでは、既につながっている接続が再認証まで使えてしまうため)。他のユーザの接続には影響しません。手動で確認・切断する場合: `docker exec strongswan swanctl --list-sas` / `swanctl --terminate --ike-id <番号>`。
+- **死活監視 (DPD)**: 30 秒ごとに端末の応答を確認し、応答のなくなった端末のセッションは自動で片付けます (`swanctl.conf` の `dpd_delay`)。
 - **VPNプール変更**: `vpn.env` の `VPN_POOL`、`docker-compose.yml` の `VPN_POOL`、`swanctl/swanctl.conf` の `addrs` を揃える。`192.168.90.1` と `.10` を含めないこと。
 - クライアントからホスト・他コンテナへの通信は MASQUERADE され、192.168.90.10 からの通信に見える。クライアント同士の通信は書き換えず、仮想 IP が見える。
 - 管理画面コンテナは root で動作するため、`pki/` 配下に root 所有のファイルができる。ホストから触るときは `sudo` を使う。
