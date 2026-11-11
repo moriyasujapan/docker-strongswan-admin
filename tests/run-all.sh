@@ -10,6 +10,7 @@ rc=0; step(){ echo; echo "### $*"; }
 strip(){ grep -v "plugin '" ; }
 
 step "A: UIでユーザ追加 / コピー / ダウンロード";            tests/ui/run.sh A $U 2>&1 | tee $E/ui-phase-A.out || rc=1
+step "D: 認証情報付きURLで開いても動く (回帰テスト)";            tests/ui/run.sh D $U 2>&1 | tee $E/ui-phase-D.out || rc=1
 step "ダウンロードしたファイルのopenssl検証"
 P12PW=$(sudo python3 -c "import json;print(json.load(open('$E/.creds-$U'))['p12Pw'])")
 { cd $E

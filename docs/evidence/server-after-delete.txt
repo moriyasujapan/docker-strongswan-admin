@@ -1,4 +1,4 @@
 listusers: alice carol bob dave 
 users.conf内の eap-uitest 件数: 0
 サーバ接続定義: rw: IKEv2, no reauthentication, rekeying every 14400s
-CRL:   15 revoked certificates:
+CRL:   18 revoked certificates:

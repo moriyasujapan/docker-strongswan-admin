@@ -1,5 +1,8 @@
+// 認証情報付きURL (https://user:pass@host/) で開かれても fetch できるよう、origin から組み立てる
+const base = () => window.location.origin;
+
 async function call(method, path, body) {
-  const r = await fetch(path, {
+  const r = await fetch(base() + path, {
     method,
     headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'vpn-admin' },
     body: body ? JSON.stringify(body) : undefined,

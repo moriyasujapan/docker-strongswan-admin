@@ -10,12 +10,12 @@
 
 | 区分 | 項目数 | 結果 |
 |---|---|---|
-| 管理画面 UI (Playwright) | 20 | **全て PASS** |
+| 管理画面 UI (Playwright) | 23 | **全て PASS** |
 | 管理API 認証/CSRF/入力検証 (curl) | 17 | **全て PASS** |
 | ダウンロードファイルの検証 (openssl) | 5 | **全て OK** |
 | VPN 接続 (UI で発行した資格情報) | 8 シナリオ | **期待どおり** |
 
-最終実行: `tests/run-all.sh` → `rc=0`、PASS 37 件 / FAIL 0 件 (ログ: [docs/run-all.log](docs/run-all.log))。
+最終実行: `tests/run-all.sh` → `rc=0`、PASS 40 件 / FAIL 0 件 (ログ: [docs/run-all.log](docs/run-all.log))。
 証跡は [docs/evidence/](docs/evidence/) にあります。
 
 > **開発中に実際の不具合を3件発見し修正しました** (後述「発見した不具合」)。いずれも修正後の最終実行で確認済みです。
@@ -61,6 +61,17 @@ docker compose up -d --build        # init-pki.sh 済み / .env 設定済みで�
 | A-17 | 再表示: .p12 パスワードが追加時と一致 | PASS |
 | A-18 | 再表示: コピーボタンで取得した値が一致 | PASS |
 
+### フェーズ D: 認証情報付きURL (回帰テスト)
+
+`https://admin:<password>@host:8443/` のようにURLへ認証情報を埋め込んで開くと、ブラウザの制約で相対パスの `fetch` が
+`Request cannot be constructed from a URL that includes credentials` で失敗する不具合があった。修正後の確認。
+
+| # | 確認内容 | 結果 |
+|---|---|---|
+| D-1 | 認証情報付きURLで開いても一覧が表示される | PASS |
+| D-2 | エラーバナー/ページエラーが出ない | PASS |
+| D-3 | 表示後、URLから認証情報が除去される (履歴・ブックマークに残さない) | PASS |
+
 ### フェーズ B / C: 再発行・削除
 
 | # | 確認内容 | 結果 |
@@ -82,6 +93,7 @@ docker compose up -d --build        # init-pki.sh 済み / .env 設定済みで�
 | 再発行完了 | ![再発行](docs/evidence/07-reissued.png) |
 | 削除の確認 | ![削除確認](docs/evidence/08-delete-confirm.png) |
 | 削除後の一覧 | ![削除後](docs/evidence/09-after-delete.png) |
+| 認証情報付きURLで開いた場合 | ![URL認証](docs/evidence/10-url-credentials.png) |
 
 ※ スクリーンショットに写るパスワードはテスト用ユーザ `uitest` のもので、テスト終了時に失効・削除済みです。
 
@@ -172,6 +184,7 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 
 ### そのほか
 
+- 認証情報をURLに埋め込んで開くと `fetch` が失敗する (`Request cannot be constructed from a URL that includes credentials`)。API 呼び出しを `location.origin` 基準にし、表示後にURLから認証情報を除去するよう修正 (フェーズ D)。URLに認証情報を入れる使い方自体は、履歴等に残るため推奨しない。
 - Astryx のテーマは `default` ではなく名前付きエクスポート (`import { neutralTheme } from '@astryxdesign/theme-neutral/built'`)。ビルドエラーで判明。
 - Astryx の `Dialog` / `AlertDialog` は `role=dialog` ではなくネイティブの `<dialog>` 要素。テストでは `dialog[open]` で取得。
 - `adduser.sh` の `reload` が、docker グループ外のユーザで失敗しても黙って成功扱いにしていた。失敗の表示と `sudo docker` へのフォールバックを追加。

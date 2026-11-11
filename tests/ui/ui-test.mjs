@@ -130,6 +130,23 @@ if (phase === 'B') {
   await dlg.getByRole('button', { name: '閉じる' }).click();
 }
 
+if (phase === 'D') {
+  // 認証情報付きURLで開いても一覧が表示される (fetch の "includes credentials" エラーの回帰テスト)
+  const c2 = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1180, height: 900 } });
+  const p2 = await c2.newPage();
+  const errs = [];
+  p2.on('pageerror', (e) => errs.push(e.message));
+  const u = new URL(BASE + '/'); u.username = 'admin'; u.password = PASS;
+  await p2.goto(u.toString());
+  await p2.getByRole('heading', { name: 'VPN ユーザ管理' }).waitFor();
+  await p2.getByRole('row').nth(1).waitFor();
+  rec('認証情報付きURLでも一覧が表示される', await p2.getByRole('row').count() > 1);
+  rec('エラーバナーが出ない', await p2.getByText('Request cannot be constructed').count() === 0 && errs.length === 0, errs.join('|'));
+  const href = await p2.evaluate(() => location.href);   // パスワードをログに出さないため値は表示しない
+  rec('URLから認証情報が除去される', !href.includes('@') && !href.includes(PASS));
+  await p2.screenshot({ path: `${OUT}/10-url-credentials.png`, fullPage: true });
+}
+
 if (phase === 'C') {
   const row = page.getByRole('row', { name: new RegExp(USER) });
   await row.getByRole('button', { name: '削除' }).click();
