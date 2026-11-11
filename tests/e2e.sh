@@ -2,6 +2,7 @@
 cd "$(dirname "$0")/.."
 DOCKER="docker"; docker info >/dev/null 2>&1 || DOCKER="sudo docker"
 S=$(mktemp -d)
+FQDN=$(grep "^VPN_FQDN=" vpn.env | cut -d= -f2)
 try(){ U=$1; PW=$2; T=$S/cl-$U-$RANDOM; mkdir -p $T/{x509ca,x509,private}
  sudo cp pki/ca/ca.crt $T/x509ca/; sudo cp ${CERT_DIR:-pki/clients/$U}/$U.crt $T/x509/; sudo cp ${CERT_DIR:-pki/clients/$U}/$U.key $T/private/
  cat > $T/swanctl.conf <<CONF
@@ -22,7 +23,7 @@ connections {
     }
     remote {
       auth = pubkey
-      id = vpn.example.com
+      id = $FQDN
     }
     children {
       c {
