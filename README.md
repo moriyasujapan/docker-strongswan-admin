@@ -129,8 +129,8 @@ pubkey側の `id` は証明書 Subject と **属性の順序まで一致** が�
 ## 4. 運用
 
 - **CA秘密鍵** (`pki/ca/ca.key`) は管理画面コンテナからアクセスできる状態です。バックアップを別に保管し、`pki/` は Git に入れないこと (`.gitignore` 済み)。
-- **CRL** の有効期間は30日。ユーザの再発行/削除のたびに更新されますが、操作がない期間が30日を超えると CRL が期限切れになります。
-  手動更新: `cd pki/ca && openssl ca -config ca.cnf -gencrl -out ca.crl && openssl crl -in ca.crl -outform DER -out ../../swanctl/x509crl/ca.crl` → `docker exec strongswan swanctl --load-all`
+- **CRL** の有効期間は30日です。管理画面コンテナが **24時間ごとに自動で再発行** して、サーバへ反映します (`scripts/refresh-crl.sh`)。間隔は `.env` の `CRL_REFRESH_HOURS` で変更できます。
+  状況確認: `docker logs strongswan-admin | grep '^\[crl\]'`。手動更新: `./scripts/refresh-crl.sh` (または管理画面コンテナ内で実行)。
 - **証明書の期限**: クライアント/サーバ証明書は825日。期限前に再発行 (サーバ証明書は `swanctl/x509/server.crt` を差し替え)。
 - **VPNプール変更**: `vpn.env` の `VPN_POOL`、`docker-compose.yml` の `VPN_POOL`、`swanctl/swanctl.conf` の `addrs` を揃える。`192.168.90.1` と `.10` を含めないこと。
 - クライアントの通信はコンテナで MASQUERADE されるため、同一ネットワーク上の他コンテナからは 192.168.90.10 からの通信に見える。

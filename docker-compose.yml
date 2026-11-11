@@ -34,6 +34,7 @@ services:
     environment:
       ADMIN_USER: ${ADMIN_USER:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?.env に ADMIN_PASSWORD を設定してください}
+      CRL_REFRESH_HOURS: ${CRL_REFRESH_HOURS:-24}   # CRL(有効30日)の自動更新間隔
     ports:
       - "8443:8443"   # FW/セキュリティグループで管理者IPのみに制限すること
     volumes:

@@ -41,6 +41,9 @@ CERT_DIR=$(ls -d pki/clients/.revoked-$U-* | sort | tail -1) tests/e2e.sh $U 2>&
 step "管理APIの認証/CSRF/入力検証"
 tests/api-security.sh 2>&1 | tee $E/api-security.txt || rc=1
 
+step "CRL自動更新 (間隔を短くして繰り返し更新されることを確認)"
+tests/crl-refresh.sh 2>&1 | grep -v "plugin '" | tee $E/crl-refresh.txt || rc=1
+
 # 秘密情報を含むファイルは証跡に残さない
 sudo rm -f $E/.creds-* $E/dl-*.key.pem $E/dl-*.p12
 sudo chown -R "$USER:$USER" $E 2>/dev/null

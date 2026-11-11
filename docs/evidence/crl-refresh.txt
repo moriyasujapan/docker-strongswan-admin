@@ -1,0 +1,10 @@
+更新前: CRL番号=1014 サーバ側=10:14
+更新後: CRL番号=1017 サーバ側=10:17
+[crl] CRL更新: crlNumber=0x1015 nextUpdate=Dec 11 04:22:13 2026 GMT
+[crl] CRL更新: crlNumber=0x1016 nextUpdate=Dec 11 04:22:28 2026 GMT
+[crl] CRL更新: crlNumber=0x1017 nextUpdate=Dec 11 04:22:42 2026 GMT
+PASS 自動更新が繰り返し実行された (CRL番号 1014 → 1017, 3回)
+PASS サーバが最新のCRLを保持
+PASS サーバ上のCRLは1つだけ (古いCRLが残らない)
+
+[exited with code 0]

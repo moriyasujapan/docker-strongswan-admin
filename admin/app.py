@@ -144,7 +144,21 @@ def dl_ca():
     return send_file(f"{PKI}/ca/ca.crt", as_attachment=True, download_name="ca.crt")
 
 
+def crl_refresher():
+    """CRLを定期的に再発行する (既定24時間ごと。CRLの有効期間は30日)"""
+    hours = float(os.environ.get("CRL_REFRESH_HOURS", "24"))
+    time.sleep(15)  # strongswan の起動を待つ
+    while True:
+        try:
+            rc, out, err = run("refresh-crl.sh")
+            print(("[crl] " + out.strip()) if rc == 0 else ("[crl] 失敗: " + (err or out).strip()), flush=True)
+        except Exception as e:  # 失敗しても次回に再試行
+            print(f"[crl] 例外: {e}", flush=True)
+        time.sleep(max(hours, 0.001) * 3600)
+
+
 if __name__ == "__main__":
+    threading.Thread(target=crl_refresher, daemon=True).start()
     tls = "/data/tls"
     os.makedirs(tls, exist_ok=True)
     if not os.path.exists(f"{tls}/key.pem"):
