@@ -1,0 +1,99 @@
+
+### A: UIでユーザ追加 / コピー / ダウンロード
+PASS 一覧表示 (既存ユーザ)
+PASS 不正なユーザ名はエラー表示
+PASS 追加ダイアログにVPNパスワード/p12パスワード表示 :: pw=16文字 p12pw=12文字
+PASS VPNパスワードをクリップボードへコピー
+PASS p12パスワードをクリップボードへコピー
+PASS download uitest.p12 :: uitest.p12 4826B
+PASS download uitest.crt.pem :: uitest.crt.pem 1684B
+PASS download uitest.key.pem :: uitest.key.pem 2484B
+PASS PEM証明書の形式
+PASS PEM秘密鍵の形式
+PASS p12はDER(0x30)で始まる
+PASS 一覧に新規ユーザが表示
+PASS 再表示: VPNパスワードが追加時と一致
+PASS 再表示: p12パスワードが追加時と一致
+PASS 再表示: コピーボタンで取得したパスワードが一致
+PASS download uitest.p12 :: uitest.p12 4826B
+PASS download ca.crt :: ca.crt 1870B
+PASS CA証明書の形式
+
+### ダウンロードしたファイルのopenssl検証
+証明書をCAで検証:
+dl-uitest.crt.pem: OK
+Subject/EKU/期限:
+  subject=CN=uitest, O=VPN
+  notAfter=Feb 13 04:04:57 2029 GMT
+  X509v3 Extended Key Usage: 
+      TLS Web Client Authentication
+秘密鍵と証明書の対応: cert=d613379d2f8b9d14 key=d613379d2f8b9d14 MATCH
+p12(正しいパスワード):
+  MAC: sha1, Iteration 2048
+  PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+  Shrouded Keybag: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+p12(誤パスワード):
+  Mac verify error: invalid password?
+
+### VPN接続: UIで発行した証明書+パスワード
+== uitest (password: correct)
+[IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
+[IKE] CHILD_SA c{1} established with SPIs c2b9e0a6_i c8ea5f72_o and TS 192.168.90.130/32 === 0.0.0.0/0
+== uitest (password: WRONG)
+initiate failed: establishing CHILD_SA 'c' failed
+[IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
+[IKE] EAP_MSCHAPV2 method failed
+
+### B: UIで再発行 (旧証明書は失効、パスワード更新)
+PASS 再発行でパスワードが変わる
+
+### VPN接続: 再発行後の新しい証明書+パスワード
+== uitest (password: correct)
+[IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
+[IKE] CHILD_SA c{1} established with SPIs c5057ebf_i cfd4200e_o and TS 192.168.90.130/32 === 0.0.0.0/0
+== uitest (password: WRONG)
+initiate failed: establishing CHILD_SA 'c' failed
+[IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
+[IKE] EAP_MSCHAPV2 method failed
+
+### VPN接続: 失効した旧証明書 (パスワードは有効) は拒否される
+== uitest (password: correct)
+initiate failed: establishing CHILD_SA 'c' failed
+== uitest (password: WRONG)
+initiate failed: establishing CHILD_SA 'c' failed
+Nov 11 04:05:35 06[CFG] certificate was revoked on Nov 11 03:32:32 UTC 2026, reason: unspecified
+Nov 11 04:05:35 06[CFG] certificate was revoked on Nov 11 03:34:23 UTC 2026, reason: unspecified
+
+### C: UIで削除
+PASS 削除後に一覧から消える
+listusers: alice carol bob dave 
+users.conf内の eap-uitest 件数: 0
+サーバ接続定義: rw: IKEv2, no reauthentication, rekeying every 14400s
+CRL:   15 revoked certificates:
+
+### VPN接続: 削除済みユーザは拒否される
+== uitest (password: correct)
+initiate failed: establishing CHILD_SA 'c' failed
+== uitest (password: WRONG)
+initiate failed: establishing CHILD_SA 'c' failed
+
+### 管理APIの認証/CSRF/入力検証
+PASS 認証なしは拒否 (HTTP 401)
+PASS 誤パスワードは拒否 (HTTP 401)
+PASS 正しい認証でユーザ一覧取得 (HTTP 200)
+PASS CSRF: カスタムヘッダ無しのPOSTは拒否 (HTTP 403)
+PASS CSRF: 別オリジンからのPOSTは拒否 (HTTP 403)
+PASS CSRF: ヘッダ無しのDELETEは拒否 (HTTP 403)
+PASS 不正なユーザ名は400 (HTTP 400)
+PASS 短すぎるパスワードは400 (HTTP 400)
+PASS パストラバーサルは404 (HTTP 404)
+PASS CA秘密鍵はダウンロード不可 (HTTP 404)
+PASS 存在しないユーザのダウンロードは404 (HTTP 404)
+PASS 認証情報API: 認証なしは拒否 (HTTP 401)
+PASS 認証情報API: 存在しないユーザは404 (HTTP 404)
+PASS 認証情報API: 不正なユーザ名は404 (HTTP 404)
+PASS 認証情報API: 既存ユーザは200 (HTTP 200)
+PASS 旧発行ユーザ(alice): VPNパスワードあり / p12パスワードは未保存(null)
+PASS CSPヘッダ (script-src 'self')
+
+完了 (rc=0)

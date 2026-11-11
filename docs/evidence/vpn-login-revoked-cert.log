@@ -1,0 +1,4 @@
+== uitest (password: correct)
+initiate failed: establishing CHILD_SA 'c' failed
+== uitest (password: WRONG)
+initiate failed: establishing CHILD_SA 'c' failed

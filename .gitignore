@@ -1,0 +1,7 @@
+pki/
+vpn.env
+.env
+swanctl/
+admin/frontend/node_modules
+admin/frontend/dist
+tests/ui/node_modules

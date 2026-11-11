@@ -1,0 +1,14 @@
+証明書をCAで検証:
+dl-uitest.crt.pem: OK
+Subject/EKU/期限:
+  subject=CN=uitest, O=VPN
+  notAfter=Feb 13 04:04:57 2029 GMT
+  X509v3 Extended Key Usage: 
+      TLS Web Client Authentication
+秘密鍵と証明書の対応: cert=d613379d2f8b9d14 key=d613379d2f8b9d14 MATCH
+p12(正しいパスワード):
+  MAC: sha1, Iteration 2048
+  PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+  Shrouded Keybag: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
+p12(誤パスワード):
+  Mac verify error: invalid password?

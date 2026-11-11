@@ -1,0 +1,55 @@
+# strongSwan(IKEv2: クライアント証明書 + パスワード) + Web管理画面
+# 事前に ./scripts/init-pki.sh を実行し、pki/ と swanctl/ を生成しておくこと
+# 起動: docker compose up -d --build   管理画面: https://<ホスト>:8443 (.env の ADMIN_PASSWORD)
+services:
+  strongswan:
+    build: ./docker
+    image: local/strongswan-swanctl:1
+    container_name: strongswan
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    networks:
+      vpn:
+        ipv4_address: 192.168.90.10   # VPNサーバ自身のIP
+    ports:
+      - "500:500/udp"
+      - "4500:4500/udp"
+    environment:
+      VPN_POOL: "192.168.90.128/25"
+    volumes:
+      - ${STRONGSWAN_DIR:-.}/swanctl:/etc/swanctl
+      - vici:/run/vici
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    image: local/strongswan-admin:1
+    container_name: strongswan-admin
+    restart: unless-stopped
+    env_file: vpn.env
+    environment:
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?.env に ADMIN_PASSWORD を設定してください}
+    ports:
+      - "8443:8443"   # FW/セキュリティグループで管理者IPのみに制限すること
+    volumes:
+      - ${STRONGSWAN_DIR:-.}/pki:/app/pki          # CA秘密鍵を含む
+      - ${STRONGSWAN_DIR:-.}/swanctl:/app/swanctl
+      - vici:/run/vici
+      - admin_tls:/data
+
+volumes:
+  vici:
+  admin_tls:
+
+networks:
+  vpn:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.90.0/24
+          gateway: 192.168.90.1
