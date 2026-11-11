@@ -1,6 +1,6 @@
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs c798c267_i c304e494_o and TS 192.168.90.129/32 === 0.0.0.0/0
+[IKE] CHILD_SA c{1} established with SPIs c6cb17bd_i c8baa75f_o and TS 192.168.90.129/32 === 0.0.0.0/0
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'

@@ -52,11 +52,10 @@ function CopyField({ label, value, id }) {
 }
 
 function Downloads({ user, onError }) {
-  // プロファイル(.mobileconfig/.sswan)は生成に失敗することがある(旧証明書など)ので、先にHEADで確認して理由を表示する
+  // 生成物(.sswan / Mac用一式)は生成に失敗することがあるので、先にHEADで確認して理由を表示する
   const checkedDownload = async (ext) => {
     try {
       const r = await fetch(window.location.origin + dlUrl(user, ext), { method: 'HEAD' });
-      if (r.status === 409) { onError && onError('この証明書は旧形式(SANなし)のため iOS/Mac 用プロファイルを作れません。「再発行」してください'); return; }
       if (!r.ok) { onError && onError(`ダウンロードに失敗しました (HTTP ${r.status})`); return; }
     } catch (e) { onError && onError(e.message); return; }
     window.location.href = dlUrl(user, ext);
@@ -75,7 +74,7 @@ function Downloads({ user, onError }) {
       {link('p12', '.p12')}
       {link('crt', '証明書 PEM')}
       {link('key', '秘密鍵 PEM')}
-      {link('mobileconfig', 'iOS/Mac (2段階認証は不可)', true)}
+      {link('tgz', 'Mac', true)}
       {link('sswan', 'Android', true)}
     </Stack>
   );

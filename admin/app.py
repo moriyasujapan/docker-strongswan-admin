@@ -128,15 +128,24 @@ def assets(f):
     return send_from_directory(f"{STATIC}/assets", f)
 
 
-PROFILES = {"mobileconfig": ("apple", "application/x-apple-aspen-config"),
-            "sswan": ("android", "application/vnd.strongswan.profile")}
+PROFILES = {"sswan": ("android", "application/vnd.strongswan.profile")}
 
 
 @app.get("/dl/<u>.<ext>")
 def download(u, ext):
-    if not USER_RE.match(u) or ext not in ("p12", "crt", "key", *PROFILES) or u not in [x for x, _ in users()]:
+    if not USER_RE.match(u) or ext not in ("p12", "crt", "key", "tgz", *PROFILES) or u not in [x for x, _ in users()]:
         abort(404)
-    if ext in PROFILES:  # iOS/Mac (.mobileconfig) / Android strongSwan (.sswan)
+    if ext == "tgz":  # Mac 用の接続一式 (Homebrew の strongSwan / charon-cmd)
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            out_path = f"{td}/b.tgz"
+            rc, out, err = run("mkmacbundle.sh", u, out_path)
+            if rc != 0:
+                return Response((err or out).strip() or "生成に失敗しました", 500, mimetype="text/plain; charset=utf-8")
+            data = open(out_path, "rb").read()
+        return Response(data, mimetype="application/gzip",
+                        headers={"Content-Disposition": f'attachment; filename="vpn-{u}-mac.tar.gz"'})
+    if ext in PROFILES:  # Android strongSwan (.sswan)
         kind, mime = PROFILES[ext]
         rc, out, err = run("mkprofile.sh", kind, u)
         if rc == 2:

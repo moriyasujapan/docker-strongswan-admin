@@ -10,17 +10,18 @@
 
 | 区分 | 項目数 | 結果 |
 |---|---|---|
-| 管理画面 UI (Playwright) | 28 | **全て PASS** |
+| 管理画面 UI (Playwright) | 27 | **全て PASS** |
 | 管理API 認証/CSRF/入力検証 (curl) | 17 | **全て PASS** |
-| iOS/Mac・Android プロファイル (構造検証 + プロファイルの値での接続) | 28 | **全て PASS** (※実機は別記) |
+| クライアント用配布物: Android `.sswan` / Mac 用一式 (構造検証 + 実際に接続) | 24 | **全て PASS** (※実機は別記) |
 | CRL 自動更新 | 3 | **全て PASS** |
 | ダウンロードファイルの検証 (openssl) / VPN 接続 (UI 発行) | 5 / 8 シナリオ | **期待どおり** |
 
-最終実行: `tests/run-all.sh` → `rc=0`、**PASS 76 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
+最終実行: `tests/run-all.sh` → `rc=0`、**PASS 71 件 / FAIL 0 件** (ログ: [docs/run-all.log](docs/run-all.log))。
 証跡は [docs/evidence/](docs/evidence/) にあります。
 
-> **実機の iOS/Mac では、証明書 + パスワードの 2 段階認証は動きませんでした** ([詳細](#6-実機ios-macでの確認結果))。
-> 上の「プロファイル 28 項目 PASS」は、プロファイルの構造と、同じ値を使った swanctl クライアントでの接続の確認であり、Apple の実機の動作を保証しません。
+> **Mac は標準の VPN 機能ではなく、Homebrew の strongSwan (`charon-cmd`) で接続します。** Apple 標準クライアントは証明書 + パスワードの
+> 2 段階認証(MFA)に対応していないためです ([詳細](#6-mac-の対応と実機iosmacでの確認結果))。Mac 用一式は Linux コンテナ上の本物の `charon-cmd` で
+> 接続まで確認しましたが、**Mac の実機では未確認**です。
 
 > **開発中に実際の不具合を6件発見し修正しました** (後述「発見した不具合と修正」)。いずれも修正後の最終実行で確認済みです。
 
@@ -215,23 +216,33 @@ UI からダウンロードしたファイルを openssl で検証。証跡: [op
 
 ---
 
-## 5.2 iOS/Mac (.mobileconfig) と Android (.sswan) プロファイル
+## 5.2 クライアント用配布物: Android (.sswan) と Mac 用一式
 
 テスト: [tests/mobile-profiles.sh](tests/mobile-profiles.sh) / 証跡: [mobile-profiles.txt](docs/evidence/mobile-profiles.txt)
-形式は strongSwan 公式の [プロファイル仕様](https://docs.strongswan.org/docs/latest/os/androidVpnClientProfiles.html) (`.sswan`) と Apple の IKEv2 ペイロード (`.mobileconfig`) に従う。
+
+**Android** (strongSwan アプリ用 `.sswan`。形式は公式の [プロファイル仕様](https://docs.strongswan.org/docs/latest/os/androidVpnClientProfiles.html))
 
 | 確認内容 | 結果 |
 |---|---|
-| 管理画面で作った新規ユーザの `.mobileconfig` / `.sswan` をダウンロードできる (HTTP 200、未認証は401) | PASS |
-| 旧形式(SANなし)の証明書: iOS/Mac 用は 409 で「再発行してください」、Android 用は生成できる | PASS |
-| `.mobileconfig`: plist として正しい、CA/PKCS12/VPN の3ペイロード、`PayloadCertificateUUID` が PKCS12 を指す、UUID が重複しない | PASS |
-| `.mobileconfig`: `RemoteAddress`=接続先(`VPN_ADDR`)、`RemoteIdentifier`=FQDN(証明書SAN)、`LocalIdentifier`=証明書SANのメール | PASS |
-| `.sswan`: JSON、`type=ikev2-cert-eap`、`remote.addr`=接続先、`remote.id`=FQDN、`local.eap_id`=ユーザ名、uuid が v4 | PASS |
-| 両方: 埋め込み CA が `ca.crt` と一致、`.p12` が `.p12` パスワードで開ける(証明書+秘密鍵)、パスワードは埋め込まない | PASS |
-| プロファイルの値だけを使った swanctl クライアントで接続 (iOS風: ID=メールSAN / IKE=AES256-SHA2_256-DH14 / ESP+PFS、Android風: ID=証明書DN) | **成功** |
-| 同: 誤パスワードは拒否 | PASS |
+| `.sswan` をダウンロードできる (HTTP 200、未認証は401)。旧形式(SANなし)の証明書のユーザでも生成できる | PASS |
+| JSON、`type=ikev2-cert-eap`、`remote.addr`=接続先(`VPN_ADDR`)、`remote.id`=FQDN、`local.eap_id`=ユーザ名、uuid が v4 | PASS |
+| 埋め込み CA が `ca.crt` と一致、`.p12` が `.p12` パスワードで開ける、パスワードは埋め込まない | PASS |
+| `.sswan` の値だけを使った swanctl クライアントで接続成功 / 誤パスワードは拒否 | PASS |
 
-**注意:** 最後の2項目は swanctl クライアントでの確認であり、Apple / Android の実クライアントの動作ではない。
+**Mac** (Homebrew の strongSwan 用の接続一式 `vpn-<user>-mac.tar.gz`: `ca.crt` / 証明書 / 秘密鍵 / `connect.sh` / `README.txt`)
+
+| 確認内容 | 結果 |
+|---|---|
+| 一式をダウンロードできる (HTTP 200、未認証は401)、内容が揃っている | PASS |
+| 同梱の CA が `ca.crt` と一致し証明書を検証できる、秘密鍵が証明書と対応 | PASS |
+| `connect.sh` は `charon-cmd --profile ikev2-pub-eap` (証明書 → EAP の 2 段階)、接続先=`VPN_ADDR`、識別名=FQDN | PASS |
+| VPN パスワードを同梱していない。接続時に `EAP password:` の入力を求める | PASS |
+| **同梱の `connect.sh` を本物の `charon-cmd` で実行して接続成功** (証明書認証 → パスワード → 仮想IP払い出し) | **成功** |
+| 同: 誤パスワードは拒否 | PASS |
+| iOS/Mac 標準クライアント用 `.mobileconfig` は提供しない (404) | PASS |
+
+**注意:** 接続の確認は Linux コンテナ上の `charon-cmd` (Debian 版 strongSwan 6.0.1) で行った。Mac の実機 (Homebrew 版、カーネルは PF_KEY/pfroute) と
+Android の実機では未確認。テスト用コンテナでは Debian の `kernel-libipsec` プラグインがカーネル IPsec と競合するため無効にしている (Homebrew 版には含まれない)。
 
 ## 5.5 CRL の自動更新
 
@@ -249,29 +260,32 @@ CRL の有効期間(30日)が切れないよう、管理画面コンテナが定
 
 ---
 
-## 6. 実機(iOS/Mac)での確認結果
+## 6. Mac の対応と、実機(iOS/Mac)での確認結果
 
-ユーザが `.mobileconfig` を iOS/Mac に取り込み、接続を試した。サーバ側のログ ([docs/ios-real-device-server-log.txt](docs/ios-real-device-server-log.txt)、クライアントIPは伏せ字):
+**結論: Apple 標準の VPN クライアントでは、証明書 + パスワードの MFA はできない。Mac は Homebrew の strongSwan で接続する。**
 
-```
-IKE_AUTH request 1 [ IDi N(INIT_CONTACT) CERTREQ IDr CPRQ(...) SA TSi TSr N(MOBIKE_SUP) ]   ← CERT も AUTH も無い
-looking for peer configs matching ...[user1@vpn.example.com]
-peer requested EAP, config unacceptable
-no alternative config found
-```
+経緯:
 
-比較: swanctl クライアント(証明書+EAP)が送る最初の IKE_AUTH は `IDi CERT ... AUTH ... N(EAP_ONLY) ...` で、`CERT` と `AUTH` を含む。
+1. 最初に `.mobileconfig` (`AuthenticationMethod=Certificate` + `ExtendedAuthEnabled=1` + 証明書) を作り、ユーザが実機に取り込んで接続を試した。サーバ側のログ
+   ([docs/ios-real-device-server-log.txt](docs/ios-real-device-server-log.txt)、クライアントIPは伏せ字):
 
-- 端末は**クライアント証明書を送らず、EAP のみを要求**した。サーバの設定(証明書 → パスワードの2段階を必須)では受け付けられず、接続できない。
-- **原因は「Apple 標準クライアントが証明書 + パスワードの2段階認証(複数認証ラウンド)を扱えない」ことで確定。**
-  ユーザの確認: 端末の VPN 設定画面で、認証方式は「証明書」か「ユーザ名」のどちらかしか選べない (EAP を有効にしても同じ)。
-  サーバログ (`CERT` / `AUTH` が無く EAP のみを要求) とも一致する。プロファイルの書き方では解決できない。
-- 取り込み時のエラーの文言は未確認 (スクリーンショットを共有してもらったが、データが大きく読み取れなかった)。
-- 対応案 (いずれも未実装・要判断): EAP-MSCHAPv2 のみの接続を追加 (パスワードのみ) / 証明書のみの接続を追加 / iOS/Mac は対象外にする。
+   ```
+   IKE_AUTH request 1 [ IDi N(INIT_CONTACT) CERTREQ IDr CPRQ(...) SA TSi TSr N(MOBIKE_SUP) ]   ← CERT も AUTH も無い
+   peer requested EAP, config unacceptable
+   ```
+
+   端末は証明書認証を行わず、EAP のみを要求した。端末の設定画面でも、認証方式は「証明書」か「ユーザ名」のどちらかしか選べなかった。
+2. strongSwan 公式の [Apple プロファイル解説](https://docs.strongswan.org/docs/latest/interop/appleIkev2Profile.html) で裏付けが取れた:
+   `Certificate` + `ExtendedAuthEnabled=1` は、証明書があれば **EAP-TLS**、無ければ **EAP-MSCHAPv2** になる。両方を順に行う設定は無い。
+3. 「Mac だけ証明書のみで接続」案は、MFA 必須の方針に反するため不採用 (実装を取り消し済み)。
+4. 採用: **Mac に strongSwan 本体を入れ (`brew install strongswan`)、`charon-cmd --profile ikev2-pub-eap` で接続する。** サーバの 2 段階認証は変更しない。
+   管理画面の「Mac」ボタンで接続一式をダウンロードできる (5.2 参照)。
+
+制約: iPhone / iPad には使えない。Mac の実機での確認は未実施。
 
 ## 7. 未実施・制約 (正直な記録)
 
-- **実機クライアント**: Android の strongSwan アプリでの `.sswan` / `.p12` の取り込みと接続は未確認 (Android 風の swanctl クライアントでの確認のみ)。iOS/Mac は上記のとおり実機で接続できなかった。Windows は未確認。
+- **実機クライアント**: Android の strongSwan アプリでの `.sswan` の取り込みと接続、Mac 実機 (Homebrew 版) での `connect.sh` は未確認。iPhone / iPad は MFA では接続できない。Windows は未確認。
 - **インターネット到達性**: VPN 接続後の実トラフィック (NAT 経由の外部通信) は未確認。
 - **管理画面の外部遮断**: 8443 を許可IP以外から遮断する設定 (ufw + `DOCKER-USER`) は入れたが、許可外の回線からの接続拒否は未検証 (ホスト自身からの通信は `DOCKER-USER` を通らないため、この環境内では検証できない)。
 - **再起動後の復旧**: ホスト再起動後の自動復旧は未確認。

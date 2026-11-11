@@ -12,7 +12,7 @@ docker-compose.yml        strongswan + admin(Web管理画面)
 docker/                   strongSwan (Debian + swanctl/charon-systemd)
 admin/app.py              管理API (Flask)。scripts/ を呼び出すだけの薄い層
 admin/frontend/           管理画面 (Vite + React 19 + @astryxdesign/core 0.7.13)
-scripts/                  adduser.sh / deluser.sh / moduser.sh / listusers.sh / init-pki.sh
+scripts/                  adduser.sh / deluser.sh / moduser.sh / listusers.sh / init-pki.sh / mkprofile.sh (Android) / mkmacbundle.sh (Mac) / refresh-crl.sh
 tests/                    run-all.sh (通しテスト) / e2e.sh (VPN接続) / ui/ (Playwright)
 docs/evidence/            テスト証跡 (スクリーンショット・ログ)
 pki/                      CA秘密鍵・クライアント証明書  ※Git管理外・厳重に保管
@@ -83,6 +83,7 @@ COMMIT
 |---|---|
 | ユーザ追加 | ユーザ名(英数字 `. _ -` 32文字以内)、パスワード(空欄で自動生成)。完了ダイアログに **VPNパスワード / .p12パスワード** が表示され、**ワンクリックでコピー**できる |
 | パスワード表示 | 一覧の「パスワード」ボタンで、VPN パスワードと .p12 パスワードをいつでも再表示・コピーできる (旧版で発行したユーザの .p12 パスワードは「未保存」。再発行で保存される) |
+| ダウンロード (端末別) | Android: `.sswan` (strongSwan アプリ用。取り込み時に .p12 パスワード、接続時に VPN パスワードを入力) / Mac: 接続一式 (下記「Mac」) |
 | ダウンロード | `.p12`(証明書+秘密鍵+CA。旧クライアント互換の3DES/SHA1) / 証明書PEM(`<user>.crt.pem`) / 秘密鍵PEM(`<user>.key.pem`) / CA証明書(`ca.crt`) |
 | 再発行 | 旧証明書を失効し、新しい証明書とパスワードを発行 (`moduser.sh`) |
 | 削除 | 証明書を失効(CRL)し、パスワードを削除 (`deluser.sh`) |
@@ -101,7 +102,8 @@ CLI でも同じ操作ができます: `./scripts/adduser.sh alice` / `moduser.s
 | クライアント | 対応 |
 |---|---|
 | strongSwan (Android 公式アプリ) / Linux swanctl | ○ |
-| Windows 標準 / **iOS・macOS 標準VPN** | **✕** 証明書+パスワードの同時利用不可 (iOS/Mac は実機で確認済み: 認証方式は「証明書」か「ユーザ名」のどちらかしか選べず、証明書を送らずEAPのみを要求した。[証跡](docs/ios-real-device-server-log.txt)) |
+| **Mac** (Homebrew の strongSwan。下記) | ○ (Mac 実機では未確認) |
+| Windows 標準 / iOS・macOS 標準VPN | ✕ 証明書+パスワードの併用不可 (Apple は実機と公式資料で確認。[TEST.md](TEST.md) 6章) |
 
 ### Android (strongSwan アプリ)
 1. `ca.crt` と `<user>.p12` を端末に転送し、アプリで p12 をインポート (p12パスワード入力)
@@ -126,11 +128,15 @@ secrets { eap-alice { id = alice; secret = "<password>" } }
 `x509ca/ca.crt`, `x509/alice.crt`, `private/alice.key` を `/etc/swanctl/` に配置。
 pubkey側の `id` は証明書 Subject と **属性の順序まで一致** が必要です (`openssl x509 -subject -noout`)。
 
-### iOS/Mac 用プロファイル (.mobileconfig) について
+### Mac (Homebrew の strongSwan)
 
-管理画面の「iOS/Mac」ボタンは `.mobileconfig` を生成しますが、**このサーバの2段階認証では接続できません** (上記)。
-iOS/Mac を使うには、サーバに「EAP のみ(パスワードのみ)」または「証明書のみ」の接続を追加する必要があり、
-その場合は認証が1要素になります (未実装・要判断)。プロファイルは、その場合の土台として残してあります。
+Mac 標準の VPN 機能は証明書 + パスワードの併用ができないため、strongSwan 本体で接続します (サーバの 2 段階認証はそのまま)。
+
+1. 管理画面の「Mac」ボタンで `vpn-<user>-mac.tar.gz` をダウンロードして展開
+2. `brew install strongswan` (初回のみ)
+3. 展開したフォルダで `./connect.sh` → Mac の管理者パスワード(sudo) → `EAP password:` に VPN パスワードを入力。切断は Ctrl+C
+
+一式には秘密鍵 (暗号化なし) が入っています。VPN パスワードは入っておらず、接続のたびに入力します。iPhone / iPad では使えません。
 
 ### 接続先アドレス (VPN_ADDR)
 

@@ -42,7 +42,7 @@ CERT_DIR=$(ls -d pki/clients/.revoked-$U-* | sort | tail -1) tests/e2e.sh $U 2>&
 step "管理APIの認証/CSRF/入力検証"
 tests/api-security.sh 2>&1 | tee $E/api-security.txt || rc=1
 
-step "iOS/Mac・Androidプロファイル (構造検証 + プロファイルの値での接続)"
+step "クライアント用配布物: Android .sswan / Mac 用一式 (構造検証 + 実際に接続)"
 tests/mobile-profiles.sh 2>&1 | grep -v "plugin '" | tee $E/mobile-profiles.txt || rc=1
 
 step "CRL自動更新 (間隔を短くして繰り返し更新されることを確認)"
@@ -51,6 +51,6 @@ tests/crl-refresh.sh 2>&1 | grep -v "plugin '" | tee $E/crl-refresh.txt || rc=1
 legacy_teardown; sudo rm -rf pki/clients/.revoked-legacy*
 
 # 秘密情報を含むファイルは証跡に残さない
-sudo rm -f $E/.creds-* $E/dl-*.key.pem $E/dl-*.p12 $E/dl-*.mobileconfig $E/dl-*.sswan
+sudo rm -f $E/.creds-* $E/dl-*.key.pem $E/dl-*.p12 $E/dl-*.sswan $E/dl-*.tar.gz
 sudo chown -R "$USER:$USER" $E 2>/dev/null
 echo; echo "完了 (rc=$rc)"; exit $rc
