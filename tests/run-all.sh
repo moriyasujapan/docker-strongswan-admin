@@ -51,6 +51,9 @@ tests/dotted-user.sh 2>&1 | grep -v "plugin '" | tee $E/dotted-user.txt || rc=1
 step "VPNクライアント同士の通信 (送信元IPが見えること)"
 tests/client-to-client.sh 2>&1 | grep -v "plugin '" | tee $E/client-to-client.txt || rc=1
 
+step "ユーザの削除・再発行で接続中のセッションを切断"
+tests/session-kill.sh 2>&1 | grep -v "plugin '" | tee $E/session-kill.txt || rc=1
+
 step "CRL自動更新 (間隔を短くして繰り返し更新されることを確認)"
 tests/crl-refresh.sh 2>&1 | grep -v "plugin '" | tee $E/crl-refresh.txt || rc=1
 

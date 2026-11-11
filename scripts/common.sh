@@ -7,6 +7,23 @@ PKI="$ROOT/pki"
 SW="$ROOT/swanctl"
 CONTAINER="${CONTAINER:-strongswan}"
 DOCKER="docker"; docker info >/dev/null 2>&1 || DOCKER="sudo docker"
+# サーバの swanctl を実行する (管理コンテナ内は vici ソケット経由、ホストでは docker exec)
+swan() {
+  if [ -S /run/vici/charon.vici ] && command -v swanctl >/dev/null; then swanctl "$@"
+  elif [ "$($DOCKER inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = "true" ]; then $DOCKER exec "$CONTAINER" swanctl "$@"
+  else return 3; fi
+}
+# 指定ユーザの接続中セッションをすべて切断する。切断した数を表示
+# 一致の対象: EAP の ID / IKE の ID がユーザ名そのもの / <user>@FQDN (証明書SAN) / 証明書の DN
+kill_sessions() {
+  local u="$1" n=0 i
+  for i in $(swan --list-sas 2>/dev/null | awk -v u="$u" -v f="$VPN_FQDN" '
+      /^[^ ].*: #[0-9]+,/ { id=$2; gsub(/[#,]/,"",id) }
+      /^  remote / { if (index($0,"EAP: \047" u "\047") || index($0,"remote \047" u "\047 @") || index($0,"remote \047" u "@" f "\047") || index($0,"remote \047CN=" u ", O=VPN\047")) print id }' | sort -u); do
+    swan --terminate --ike-id "$i" --force >/dev/null 2>&1 && n=$((n+1))
+  done
+  echo "切断したセッション: $n"
+}
 reload() {
   local out
   if [ -S /run/vici/charon.vici ] && command -v swanctl >/dev/null; then   # Web管理コンテナ: viciソケット経由
