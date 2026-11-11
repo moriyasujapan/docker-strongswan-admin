@@ -8,7 +8,7 @@ PASS p12パスワードをクリップボードへコピー
 PASS download uitest.p12 :: uitest.p12 4858B
 PASS download uitest.crt.pem :: uitest.crt.pem 1732B
 PASS download uitest.key.pem :: uitest.key.pem 2484B
-PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 6662B
+PASS download vpn-uitest-mac.tar.gz :: vpn-uitest-mac.tar.gz 6660B
 PASS Mac用の接続一式が gzip 形式
 PASS download uitest.sswan :: uitest.sswan 8694B
 PASS Android用 .sswan が type=ikev2-cert-eap のJSON
@@ -33,10 +33,10 @@ PASS URLから認証情報が除去される
 dl-uitest.crt.pem: OK
 Subject/EKU/期限:
   subject=CN=uitest, O=VPN
-  notAfter=Feb 13 06:05:46 2029 GMT
+  notAfter=Feb 13 06:27:57 2029 GMT
   X509v3 Extended Key Usage: 
       TLS Web Client Authentication
-秘密鍵と証明書の対応: cert=e5678788050bdf06 key=e5678788050bdf06 MATCH
+秘密鍵と証明書の対応: cert=10c9249ba61244e4 key=10c9249ba61244e4 MATCH
 p12(正しいパスワード):
   MAC: sha1, Iteration 2048
   PKCS7 Encrypted data: pbeWithSHA1And3-KeyTripleDES-CBC, Iteration 2048
@@ -47,7 +47,7 @@ p12(誤パスワード):
 ### VPN接続: UIで発行した証明書+パスワード
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs c00bc0b8_i cf38eef5_o and TS 192.168.90.129/32 === 192.168.90.0/24
+[IKE] CHILD_SA c{1} established with SPIs cfb66161_i cf64734c_o and TS 192.168.90.129/32 === 192.168.90.0/24
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
@@ -59,7 +59,7 @@ PASS 再発行でパスワードが変わる
 ### VPN接続: 再発行後の新しい証明書+パスワード
 == uitest (password: correct)
 [IKE] IKE_SA c[1] established between 192.168.90.2[uitest]...192.168.90.10[vpn.example.com]
-[IKE] CHILD_SA c{1} established with SPIs ce9de3bd_i c5e7ad3b_o and TS 192.168.90.129/32 === 192.168.90.0/24
+[IKE] CHILD_SA c{1} established with SPIs cbdec95b_i cb6b5825_o and TS 192.168.90.129/32 === 192.168.90.0/24
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
 [IKE] EAP-MS-CHAPv2 failed with error ERROR_AUTHENTICATION_FAILURE: '(null)'
@@ -70,15 +70,15 @@ initiate failed: establishing CHILD_SA 'c' failed
 initiate failed: establishing CHILD_SA 'c' failed
 == uitest (password: WRONG)
 initiate failed: establishing CHILD_SA 'c' failed
-Nov 11 06:06:34 05[CFG] certificate was revoked on Nov 11 06:00:47 UTC 2026, reason: unspecified
-Nov 11 06:06:34 05[CFG] certificate was revoked on Nov 11 06:01:15 UTC 2026, reason: unspecified
+Nov 11 06:28:47 06[CFG] certificate was revoked on Nov 11 06:25:29 UTC 2026, reason: unspecified
+Nov 11 06:28:47 06[CFG] certificate status is good
 
 ### C: UIで削除
 PASS 削除後に一覧から消える
 残りのユーザ数: 2 (実ユーザ名は証跡に残さない) / uitest が一覧に無い: yes
 users.conf内の uitest のエントリ数: 0
 サーバ接続定義: rw: IKEv2, no reauthentication, rekeying every 14400s
-CRL:   60 revoked certificates:
+CRL:   73 revoked certificates:
 
 ### VPN接続: 削除済みユーザは拒否される
 == uitest (password: correct)
@@ -103,6 +103,7 @@ PASS 認証情報API: 存在しないユーザは404 (HTTP 404)
 PASS 認証情報API: 不正なユーザ名は404 (HTTP 404)
 PASS 認証情報API: 既存ユーザは200 (HTTP 200)
 PASS 旧発行ユーザ: VPNパスワードあり / p12パスワードは未保存(null)
+PASS VPNネットワーク内から、ホスト経由の管理画面 (192.168.90.1:8443) に届き、認証を要求する (HTTP 401)
 PASS CSPヘッダ (script-src 'self')
 
 ### クライアント用配布物: Android .sswan / Mac 用一式 (構造検証 + 実際に接続)
@@ -145,13 +146,18 @@ PASS ドット入りユーザで VPN 接続 (証明書+パスワード) 成功
 PASS 削除できる
 PASS 削除後も接続定義 rw が読み込まれている
 
+### VPNクライアント同士の通信 (送信元IPが見えること)
+PASS 2台のクライアントが同時に接続し、別々の仮想IPを受け取る (192.168.90.134 / 192.168.90.135)
+PASS クライアント B → A (仮想IP宛て) に TCP 接続できる
+PASS A から見える送信元は B の仮想IP (192.168.90.135。VPNサーバのIPに書き換わらない)
+
 ### CRL自動更新 (間隔を短くして繰り返し更新されることを確認)
-更新前: CRL番号=1072 サーバ側=10:72
-更新後: CRL番号=1075 サーバ側=10:75
-[crl] CRL更新: crlNumber=0x1073 nextUpdate=Dec 11 06:08:28 2026 GMT
-[crl] CRL更新: crlNumber=0x1074 nextUpdate=Dec 11 06:08:43 2026 GMT
-[crl] CRL更新: crlNumber=0x1075 nextUpdate=Dec 11 06:08:57 2026 GMT
-PASS 自動更新が繰り返し実行された (CRL番号 1072 → 1075, 3回)
+更新前: CRL番号=1088 サーバ側=10:88
+更新後: CRL番号=108B サーバ側=10:8b
+[crl] CRL更新: crlNumber=0x1089 nextUpdate=Dec 11 06:30:51 2026 GMT
+[crl] CRL更新: crlNumber=0x108A nextUpdate=Dec 11 06:31:06 2026 GMT
+[crl] CRL更新: crlNumber=0x108B nextUpdate=Dec 11 06:31:20 2026 GMT
+PASS 自動更新が繰り返し実行された (CRL番号 1088 → 108B, 3回)
 PASS サーバが最新のCRLを保持
 PASS サーバ上のCRLは1つだけ (古いCRLが残らない)
 
